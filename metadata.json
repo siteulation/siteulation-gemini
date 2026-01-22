@@ -1,5 +1,5 @@
 {
-  "name": "CartCrafter",
-  "description": "An AI-powered micro-app generator. Users can create account, verify emails, and generate single-file HTML/JS/CSS applications (Carts) using Gemini 2.5 and 3.0 models.",
+  "name": "Siteulation",
+  "description": "Generate your digital reality. AI-powered single-file web app generator using Gemini 2.5 and 3.0.",
   "requestFramePermissions": []
 }

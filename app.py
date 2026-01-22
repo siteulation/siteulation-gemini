@@ -16,9 +16,8 @@ SUPABASE_KEY = os.environ.get("DATABASE_KEY")
 app = Flask(__name__, static_folder='frontend', static_url_path='/frontend')
 CORS(app)
 
-# Ensure .tsx files are served with the correct MIME type so browsers accept them as JS
-mimetypes.add_type('application/javascript', '.tsx')
-mimetypes.add_type('application/javascript', '.ts')
+# Ensure .js files are served with the correct MIME type
+mimetypes.add_type('application/javascript', '.js')
 
 # Initialize Gemini Client
 ai_client = genai.Client(api_key=API_KEY)
@@ -39,7 +38,6 @@ def index():
             content = f.read()
             
         # Inject environment variables for Frontend
-        # Note: In production, ensure you are only exposing the ANON key, not service role key if possible.
         env_script = f"""
         <script>
           window.env = {{
@@ -57,7 +55,7 @@ def index():
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({"status": "ok", "service": "CartCrafter Backend"}), 200
+    return jsonify({"status": "ok", "service": "Siteulation Backend"}), 200
 
 @app.route('/api/generate', methods=['POST'])
 def generate_cart():
@@ -78,12 +76,12 @@ def generate_cart():
     selected_model = model_map.get(model_choice, "gemini-2.5-flash")
 
     system_instruction = (
-        "You are an expert web developer. Your task is to generate a SINGLE-FILE "
-        "HTML application based on the user's prompt. "
+        "You are 'Siteulation AI', an advanced web architect. Your task is to generate a SINGLE-FILE "
+        "HTML application based on the user's simulation parameters (prompt). "
         "The file must include valid HTML5, CSS (in <style> tags), and JavaScript (in <script> tags). "
         "The application must be fully functional within this single file. "
         "Do not include markdown formatting (like ```html). Return ONLY the raw code."
-        "Make the design modern, using a nice color palette and responsive layout."
+        "Make the design futuristic, clean, and highly responsive."
     )
 
     try:
@@ -129,7 +127,7 @@ def generate_cart():
         }), 201
 
     except Exception as e:
-        print(f"Error generating cart: {e}")
+        print(f"Error generating site: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/carts', methods=['GET'])
@@ -139,7 +137,7 @@ def get_recent_carts():
         response = requests.get(url, headers=get_supabase_headers())
         
         if response.status_code != 200:
-            return jsonify({"error": "Failed to fetch carts"}), response.status_code
+            return jsonify({"error": "Failed to fetch sites"}), response.status_code
 
         return jsonify(response.json()), 200
     except Exception as e:

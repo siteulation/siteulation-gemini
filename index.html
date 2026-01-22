@@ -3,18 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CartCrafter - AI Web Generator</title>
+    <title>Siteulation | Digital Reality Generator</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              gray: {
-                900: '#111827',
-                800: '#1f2937',
-                700: '#374151',
+              slate: {
+                850: '#151e2e',
+                900: '#0f172a',
+                950: '#020617',
+              },
+              primary: {
+                400: '#818cf8',
+                500: '#6366f1',
+                600: '#4f46e5',
               }
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
             }
           }
         }
@@ -34,8 +42,8 @@
 }
 </script>
 </head>
-  <body class="bg-gray-900 text-white antialiased">
+  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-primary-500 selection:text-white">
     <div id="root"></div>
-    <script type="module" src="./frontend/index.tsx"></script>
+    <script type="module" src="./frontend/index.js"></script>
   </body>
 </html>
