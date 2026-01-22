@@ -105,7 +105,7 @@ def serve_html_with_meta(title=None, description=None):
 
     # Defaults
     default_title = "Siteulation | Digital Reality Generator"
-    default_desc = "Generate your digital reality. AI-powered single-file web app generator using Gemini 2.5 and 3.0."
+    default_desc = "Generate your digital reality. AI-powered single-file web app generator using Gemini 3.0."
     
     target_title = title if title else default_title
     target_desc = description if description else default_desc
@@ -370,13 +370,17 @@ def generate_cart():
     data = request.json or {}
     prompt = data.get('prompt')
     name = data.get('name') or prompt # Default name to prompt if not set
-    model_choice = data.get('model', 'gemini-2.5')
+    model_choice = data.get('model', 'gemini-3') # Default to Gemini 3
     remix_code = data.get('remix_code') # The code from the original cart if remixing
     
     if not prompt:
         return jsonify({"error": "Prompt required"}), 400
 
-    model_name = "gemini-3-flash-preview" if model_choice == "gemini-3" else "gemini-2.5-flash"
+    # Allow legacy 2.5 support if requested explicitly, otherwise default to 3
+    if model_choice == "gemini-2.5":
+        model_name = "gemini-2.5-flash"
+    else:
+        model_name = "gemini-3-flash-preview"
     
     # Construct prompt based on if it is a remix
     if remix_code:

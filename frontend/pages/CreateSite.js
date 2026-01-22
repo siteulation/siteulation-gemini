@@ -8,7 +8,7 @@ import { html } from '../utils.js';
 const CreateSite = () => {
   const [prompt, setPrompt] = useState('');
   const [name, setName] = useState('');
-  const [model, setModel] = useState(ModelType.GEMINI_2_5);
+  const [model, setModel] = useState(ModelType.GEMINI_3);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -157,33 +157,12 @@ const CreateSite = () => {
             
             <button
               type="button"
-              onClick=${() => setModel(ModelType.GEMINI_2_5)}
-              className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${
-                model === ModelType.GEMINI_2_5
-                  ? 'bg-slate-800 border-primary-500 ring-1 ring-primary-500'
-                  : 'bg-slate-900/50 border-white/5 hover:border-white/10'
-              }`}
+              disabled
+              className="w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group bg-slate-800 border-purple-500 ring-1 ring-purple-500 cursor-default"
             >
               <div className="flex justify-between items-start mb-2">
-                <${Zap} className=${model === ModelType.GEMINI_2_5 ? 'text-primary-400' : 'text-slate-600'} size=${24} />
-                ${model === ModelType.GEMINI_2_5 && html`<span className="text-[10px] bg-primary-500 text-white px-2 py-0.5 rounded-full font-bold">ACTIVE</span>`}
-              </div>
-              <div className="font-bold text-white">Gemini 2.5 Flash</div>
-              <div className="text-xs text-slate-400 mt-1">High-velocity compilation. Best for standard utilities.</div>
-            </button>
-
-            <button
-              type="button"
-              onClick=${() => setModel(ModelType.GEMINI_3)}
-              className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${
-                model === ModelType.GEMINI_3
-                  ? 'bg-slate-800 border-purple-500 ring-1 ring-purple-500'
-                  : 'bg-slate-900/50 border-white/5 hover:border-white/10'
-              }`}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <${Cpu} className=${model === ModelType.GEMINI_3 ? 'text-purple-400' : 'text-slate-600'} size=${24} />
-                ${model === ModelType.GEMINI_3 && html`<span className="text-[10px] bg-purple-500 text-white px-2 py-0.5 rounded-full font-bold">PREVIEW</span>`}
+                <${Cpu} className="text-purple-400" size=${24} />
+                <span className="text-[10px] bg-purple-500 text-white px-2 py-0.5 rounded-full font-bold">LATEST</span>
               </div>
               <div className="font-bold text-white">Gemini 3.0 Flash</div>
               <div className="text-xs text-slate-400 mt-1">Advanced reasoning engine. Best for complex logic.</div>

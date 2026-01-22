@@ -267,7 +267,7 @@ const ViewSite = ({ user }) => {
             srcDoc=${cart.code}
             title=${`Site ${cart.id}`}
             className="w-full h-full border-0"
-            sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"
+            sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin allow-pointer-lock"
           />
         </div>
       </div>
