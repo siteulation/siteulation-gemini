@@ -1,147 +1,240 @@
 import os
-import json
 import requests
 import mimetypes
-from flask import Flask, request, jsonify, send_from_directory, make_response
+import traceback
+from flask import Flask, request, jsonify
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
 from google import genai
 from google.genai import types
 
-# Load environment variables
+# --- Path Configuration ---
+# Get the absolute path to the directory containing this file
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+# Define path to frontend folder
+FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
+# Define path to index.html
+INDEX_PATH = os.path.join(BASE_DIR, 'index.html')
+
+# --- Env Vars ---
 API_KEY = os.environ.get("APIKEY")
 SUPABASE_URL = os.environ.get("DATABASE_URL")
-SUPABASE_KEY = os.environ.get("DATABASE_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY") # Secret Service Role Key
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY") # Public Anon Key
 
-# Configure Flask to serve static files from the 'frontend' directory
-app = Flask(__name__, static_folder='frontend', static_url_path='/frontend')
+# --- App Setup ---
+# static_folder points to the frontend directory
+app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='/frontend')
 CORS(app)
 
-# Ensure .js files are served with the correct MIME type
 mimetypes.add_type('application/javascript', '.js')
 
-# Initialize Gemini Client
-ai_client = genai.Client(api_key=API_KEY)
+# Initialize Gemini
+ai_client = None
+if API_KEY:
+    try:
+        ai_client = genai.Client(api_key=API_KEY)
+    except Exception as e:
+        print(f"Gemini Init Error: {e}")
 
-def get_supabase_headers():
+# --- Helpers ---
+def get_db_headers():
     return {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
         "Content-Type": "application/json",
         "Prefer": "return=representation"
     }
 
-@app.route('/')
-def index():
-    # Read index.html
+def get_auth_headers():
+    return {
+        "apikey": SUPABASE_ANON_KEY,
+        "Content-Type": "application/json"
+    }
+
+def verify_token(req):
+    auth_header = req.headers.get('Authorization')
+    if not auth_header:
+        return None
+    
+    token = auth_header.split(" ")[1] if " " in auth_header else auth_header
+    
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        print("Error: Missing Supabase Config")
+        return None
+
+    url = f"{SUPABASE_URL}/auth/v1/user"
+    headers = {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": f"Bearer {token}"
+    }
+    
     try:
-        with open('index.html', 'r') as f:
-            content = f.read()
-            
-        # Inject environment variables for Frontend
-        env_script = f"""
-        <script>
-          window.env = {{
-            SUPABASE_URL: "{SUPABASE_URL}",
-            SUPABASE_KEY: "{SUPABASE_KEY}"
-          }};
-        </script>
-        """
-        # Inject before </head>
-        content = content.replace('</head>', f'{env_script}</head>')
-        
-        return content
-    except FileNotFoundError:
-        return "index.html not found", 404
+        response = requests.get(url, headers=headers, timeout=5)
+        if response.status_code == 200:
+            return response.json()
+    except Exception as e:
+        print(f"Auth verification failed: {e}")
+    
+    return None
+
+# --- Global Error Handlers ---
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    if isinstance(e, HTTPException):
+        return jsonify({"error": e.description}), e.code
+    
+    traceback.print_exc()
+    return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
+
+@app.errorhandler(404)
+def not_found(e):
+    if request.path.startswith('/api/'):
+        return jsonify({"error": f"API Endpoint not found: {request.path}"}), 404
+    # For non-API 404s, we let the catch-all route handle it
+    return "Page not found", 404
+
+# --- API Routes ---
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({"status": "ok", "service": "Siteulation Backend"}), 200
+    return jsonify({"status": "ok"}), 200
+
+# --- Auth Routes ---
+
+@app.route('/api/auth/signup', methods=['POST'])
+def auth_signup():
+    data = request.json or {}
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+
+    url = f"{SUPABASE_URL}/auth/v1/signup"
+    payload = {
+        "email": data.get('email'),
+        "password": data.get('password'),
+        "data": {"username": data.get('username')}
+    }
+    resp = requests.post(url, json=payload, headers=get_auth_headers())
+    try:
+        return jsonify(resp.json()), resp.status_code
+    except:
+        return jsonify({"error": resp.text}), resp.status_code
+
+@app.route('/api/auth/signin', methods=['POST'])
+def auth_signin():
+    data = request.json or {}
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+
+    url = f"{SUPABASE_URL}/auth/v1/token?grant_type=password"
+    payload = {
+        "email": data.get('email'), 
+        "password": data.get('password')
+    }
+    resp = requests.post(url, json=payload, headers=get_auth_headers())
+    try:
+        return jsonify(resp.json()), resp.status_code
+    except:
+        return jsonify({"error": resp.text}), resp.status_code
+
+@app.route('/api/auth/user', methods=['GET'])
+def auth_user():
+    user = verify_token(request)
+    if user:
+        return jsonify(user), 200
+    return jsonify({"error": "Invalid or expired token"}), 401
+
+# --- Data Routes ---
+
+@app.route('/api/carts', methods=['GET'])
+def get_carts():
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+
+    url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order=created_at.desc&limit=20"
+    resp = requests.get(url, headers=get_db_headers())
+    try:
+        return jsonify(resp.json()), resp.status_code
+    except:
+        return jsonify({"error": "DB Error", "details": resp.text}), 500
+
+@app.route('/api/carts/<id>', methods=['GET'])
+def get_cart_by_id(id):
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+
+    url = f"{SUPABASE_URL}/rest/v1/carts?select=*&id=eq.{id}"
+    resp = requests.get(url, headers=get_db_headers())
+    data = resp.json()
+    if not data:
+        return jsonify({"error": "Cart not found"}), 404
+    return jsonify(data[0]), 200
 
 @app.route('/api/generate', methods=['POST'])
 def generate_cart():
-    data = request.json
-    prompt = data.get('prompt')
-    model_choice = data.get('model')
-    user_id = data.get('userId')
-    username = data.get('username')
-
-    if not all([prompt, model_choice, user_id]):
-        return jsonify({"error": "Missing required fields"}), 400
-
-    model_map = {
-        "gemini-2.5": "gemini-2.5-flash",
-        "gemini-3": "gemini-3-flash-preview"
-    }
+    user = verify_token(request)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
     
-    selected_model = model_map.get(model_choice, "gemini-2.5-flash")
+    if not ai_client:
+        return jsonify({"error": "AI not initialized"}), 500
 
+    data = request.json or {}
+    prompt = data.get('prompt')
+    model_choice = data.get('model', 'gemini-2.5')
+    
+    if not prompt:
+        return jsonify({"error": "Prompt required"}), 400
+
+    model_name = "gemini-3-flash-preview" if model_choice == "gemini-3" else "gemini-2.5-flash"
+    
     system_instruction = (
-        "You are 'Siteulation AI', an advanced web architect. Your task is to generate a SINGLE-FILE "
-        "HTML application based on the user's simulation parameters (prompt). "
-        "The file must include valid HTML5, CSS (in <style> tags), and JavaScript (in <script> tags). "
-        "The application must be fully functional within this single file. "
-        "Do not include markdown formatting (like ```html). Return ONLY the raw code."
-        "Make the design futuristic, clean, and highly responsive."
+        "You are Siteulation AI. Generate a SINGLE-FILE HTML app. "
+        "Include CSS in <style> and JS in <script>. "
+        "Do NOT use markdown. Return raw HTML only."
     )
 
     try:
         response = ai_client.models.generate_content(
-            model=selected_model,
+            model=model_name,
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.7
             )
         )
+        code = response.text.replace("```html", "").replace("```", "")
         
-        generated_code = response.text
-
-        # Clean up markdown
-        if generated_code.startswith("```"):
-            lines = generated_code.splitlines()
-            if lines[0].strip().startswith("```"):
-                lines = lines[1:]
-            if lines[-1].strip().startswith("```"):
-                lines = lines[:-1]
-            generated_code = "\n".join(lines)
-
+        # Save to DB
         url = f"{SUPABASE_URL}/rest/v1/carts"
         payload = {
-            "user_id": user_id,
-            "username": username,
+            "user_id": user['id'],
+            "username": user.get('user_metadata', {}).get('username', 'Anonymous'),
             "prompt": prompt,
-            "model": selected_model,
-            "code": generated_code
+            "model": model_name,
+            "code": code
         }
+        db_resp = requests.post(url, json=payload, headers=get_db_headers())
         
-        db_response = requests.post(url, json=payload, headers=get_supabase_headers())
-        
-        if db_response.status_code not in [200, 201]:
-            raise Exception(f"Database error: {db_response.text}")
-
-        saved_cart = db_response.json()[0]
-
-        return jsonify({
-            "success": True, 
-            "cart": saved_cart
-        }), 201
+        if db_resp.status_code >= 300:
+            raise Exception(f"DB Error: {db_resp.text}")
+            
+        return jsonify({"success": True, "cart": db_resp.json()[0]}), 201
 
     except Exception as e:
-        print(f"Error generating site: {e}")
+        print(f"Gen Error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/carts', methods=['GET'])
-def get_recent_carts():
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order=created_at.desc&limit=20"
-        response = requests.get(url, headers=get_supabase_headers())
+# --- Catch-All Route (Must be last) ---
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_spa(path):
+    # If it starts with api/, it's a 404'd API call
+    if path.startswith('api/'):
+        return jsonify({"error": f"API Endpoint not found: {path}"}), 404
         
-        if response.status_code != 200:
-            return jsonify({"error": "Failed to fetch sites"}), response.status_code
-
-        return jsonify(response.json()), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    # Serve index.html for SPA routing
+    if os.path.exists(INDEX_PATH):
+        with open(INDEX_PATH, 'r') as f:
+            return f.read()
+    return "Index file not found. Ensure backend is running from root.", 404
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
