@@ -14,9 +14,15 @@ const ViewSite = () => {
     const fetchCart = async () => {
       if (!id) return;
       try {
-        // api.request returns the data object directly
+        // Fetch cart data
         const data = await api.request(`/api/carts/${id}`);
         setCart(data);
+        
+        // Increment view count asynchronously (don't await or block UI)
+        api.request(`/api/carts/${id}/view`, { method: 'POST' }).catch(err => {
+            console.warn("Failed to count view", err);
+        });
+        
       } catch (error) {
         console.error("Error fetching site:", error);
       } finally {

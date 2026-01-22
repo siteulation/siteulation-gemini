@@ -175,7 +175,15 @@ def auth_user():
 def get_carts():
     if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
 
-    url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order=created_at.desc&limit=20"
+    sort_mode = request.args.get('sort', 'recent')
+    
+    # Determine sorting order
+    if sort_mode == 'popular':
+        order_param = 'views.desc'
+    else:
+        order_param = 'created_at.desc'
+
+    url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order={order_param}&limit=20"
     resp = requests.get(url, headers=get_db_headers())
     try:
         return jsonify(resp.json()), resp.status_code
@@ -192,6 +200,25 @@ def get_cart_by_id(id):
     if not data:
         return jsonify({"error": "Cart not found"}), 404
     return jsonify(data[0]), 200
+
+@app.route('/api/carts/<id>/view', methods=['POST'])
+def increment_cart_view(id):
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+
+    # Call the stored procedure (RPC) to increment view count
+    url = f"{SUPABASE_URL}/rest/v1/rpc/increment_cart_views"
+    payload = {"row_id": id}
+    
+    try:
+        resp = requests.post(url, json=payload, headers=get_db_headers())
+        if resp.status_code >= 400:
+            print(f"Failed to increment views for {id}: {resp.text}")
+            # Don't fail the request significantly if view count fails, just log it
+            return jsonify({"success": False}), 200
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"View increment error: {e}")
+        return jsonify({"success": False}), 200
 
 @app.route('/api/generate', methods=['POST'])
 def generate_cart():
@@ -235,7 +262,8 @@ def generate_cart():
             "username": user.get('user_metadata', {}).get('username', 'Anonymous'),
             "prompt": prompt,
             "model": model_name,
-            "code": code
+            "code": code,
+            "views": 0
         }
         db_resp = requests.post(url, json=payload, headers=get_db_headers())
         

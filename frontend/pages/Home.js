@@ -1,19 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api.js';
 import { SiteCard } from '../components/SiteCard.js';
-import { Loader2, Sparkles, Command } from 'lucide-react';
+import { Loader2, Sparkles, Command, Flame, Clock } from 'lucide-react';
 import { html } from '../utils.js';
 import { Link } from 'react-router-dom';
 
 const Home = () => {
   const [carts, setCarts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('recent'); // 'recent' | 'popular'
 
   useEffect(() => {
     const fetchCarts = async () => {
+      setLoading(true);
       try {
         // api.request returns the parsed JSON data directly
-        const data = await api.request('/api/carts');
+        // Pass sort parameter based on activeTab
+        const data = await api.request(`/api/carts?sort=${activeTab}`);
         if (Array.isArray(data)) {
           setCarts(data);
         } else {
@@ -28,7 +31,7 @@ const Home = () => {
     };
 
     fetchCarts();
-  }, []);
+  }, [activeTab]); // Refetch when tab changes
 
   return html`
     <div className="min-h-screen pt-16">
@@ -68,12 +71,29 @@ const Home = () => {
 
       <!-- Feed Section -->
       <div className="container mx-auto px-4 py-16">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 space-y-4 md:space-y-0">
           <h2 className="text-2xl font-bold text-white flex items-center space-x-2">
             <${Sparkles} className="text-primary-400" size=${24} />
-            <span>Recent Carts</span>
+            <span>Community Carts</span>
           </h2>
-          <div className="text-sm text-slate-500 font-mono">LIVE FEED</div>
+          
+          <!-- Tabs -->
+          <div className="bg-slate-900 border border-white/10 p-1 rounded-lg inline-flex items-center self-start md:self-auto">
+            <button 
+              onClick=${() => setActiveTab('recent')}
+              className=${`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'recent' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <${Clock} size=${16} />
+              <span>Recent</span>
+            </button>
+            <button 
+              onClick=${() => setActiveTab('popular')}
+              className=${`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'popular' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+            >
+              <${Flame} size=${16} />
+              <span>Popular</span>
+            </button>
+          </div>
         </div>
 
         ${loading ? html`

@@ -1,3 +1,4 @@
+
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
@@ -16,6 +17,7 @@ create table public.carts (
   prompt text not null,
   model text not null,
   code text not null,
+  views integer default 0,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -28,9 +30,12 @@ alter table public.carts enable row level security;
 create policy "Carts are public" on public.carts
   for select using (true);
 
--- Authenticated users can insert their own carts (usually handled by backend service role, but good to have)
+-- Authenticated users can insert their own carts
 create policy "Users can insert own carts" on public.carts
   for insert with check (auth.uid() = user_id);
+  
+-- Allow the service role (backend) to update views, or create specific policy
+-- For simplicity, we rely on the backend using the Service Role Key which bypasses RLS for updates
 
 -- Policies for Profiles
 create policy "Public profiles are viewable by everyone" on public.profiles
@@ -56,3 +61,13 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- RPC Function to increment views safely
+create or replace function increment_cart_views(row_id uuid)
+returns void as $$
+begin
+  update public.carts
+  set views = views + 1
+  where id = row_id;
+end;
+$$ language plpgsql security definer;
