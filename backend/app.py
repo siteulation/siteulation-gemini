@@ -92,7 +92,7 @@ def handle_exception(e):
 def not_found(e):
     if request.path.startswith('/api/'):
         return jsonify({"error": f"API Endpoint not found: {request.path}"}), 404
-    # For non-API 404s, we let the catch-all route handle it (or return text if catch-all fails)
+    # For non-API 404s, we let the catch-all route handle it
     return "Page not found", 404
 
 # --- API Routes ---
@@ -101,9 +101,13 @@ def not_found(e):
 def health_check():
     return jsonify({"status": "ok"}), 200
 
+# --- Auth Routes (Restored) ---
+
 @app.route('/api/auth/signup', methods=['POST'])
 def auth_signup():
     data = request.json or {}
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+
     url = f"{SUPABASE_URL}/auth/v1/signup"
     payload = {
         "email": data.get('email'),
@@ -119,6 +123,8 @@ def auth_signup():
 @app.route('/api/auth/signin', methods=['POST'])
 def auth_signin():
     data = request.json or {}
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+
     url = f"{SUPABASE_URL}/auth/v1/token?grant_type=password"
     payload = {
         "email": data.get('email'), 
@@ -137,8 +143,12 @@ def auth_user():
         return jsonify(user), 200
     return jsonify({"error": "Invalid or expired token"}), 401
 
+# --- Data Routes ---
+
 @app.route('/api/carts', methods=['GET'])
 def get_carts():
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+
     url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order=created_at.desc&limit=20"
     resp = requests.get(url, headers=get_db_headers())
     try:
@@ -148,6 +158,8 @@ def get_carts():
 
 @app.route('/api/carts/<id>', methods=['GET'])
 def get_cart_by_id(id):
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+
     url = f"{SUPABASE_URL}/rest/v1/carts?select=*&id=eq.{id}"
     resp = requests.get(url, headers=get_db_headers())
     data = resp.json()
@@ -222,7 +234,7 @@ def serve_spa(path):
     if os.path.exists(INDEX_PATH):
         with open(INDEX_PATH, 'r') as f:
             return f.read()
-    return "Index file not found", 404
+    return "Index file not found. Ensure backend is running from root.", 404
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
