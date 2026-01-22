@@ -95,6 +95,32 @@ def verify_token(req):
     
     return None
 
+def serve_html_with_meta(title=None, description=None):
+    """Reads index.html and injects dynamic meta tags."""
+    if not os.path.exists(INDEX_PATH):
+        return "Index file not found.", 404
+
+    with open(INDEX_PATH, 'r') as f:
+        html_content = f.read()
+
+    # Defaults
+    default_title = "Siteulation | Digital Reality Generator"
+    default_desc = "Generate your digital reality. AI-powered single-file web app generator using Gemini 2.5 and 3.0."
+    
+    target_title = title if title else default_title
+    target_desc = description if description else default_desc
+    
+    # Simple string replacements (Assuming index.html has these default strings)
+    # We replace the Open Graph and Twitter tags specifically
+    
+    html_content = html_content.replace(f'content="{default_title}"', f'content="{target_title}"')
+    html_content = html_content.replace(f'content="{default_desc}"', f'content="{target_desc}"')
+    
+    # Also update the actual <title> tag
+    html_content = html_content.replace(f'<title>{default_title}</title>', f'<title>{target_title}</title>')
+    
+    return html_content
+
 # --- Global Error Handlers ---
 
 @app.errorhandler(Exception)
@@ -110,7 +136,7 @@ def not_found(e):
     if request.path.startswith('/api/'):
         return jsonify({"error": f"API Endpoint not found: {request.path}"}), 404
     # For non-API 404s, we let the catch-all route handle it
-    return "Page not found", 404
+    return serve_html_with_meta()
 
 # --- API Routes ---
 
@@ -344,7 +370,40 @@ def generate_cart():
         print(f"Gen Error: {e}")
         return jsonify({"error": str(e)}), 500
 
-# --- Catch-All Route (Must be last) ---
+# --- Serving & Meta Injection ---
+
+@app.route('/site/<id>', methods=['GET'])
+def serve_site_preview(id):
+    """
+    SSR Route specifically for Discord/Social crawlers to see correct meta tags.
+    """
+    if not SUPABASE_URL:
+        return serve_html_with_meta() # Fallback
+
+    # Fetch cart details to get title/desc
+    url = f"{SUPABASE_URL}/rest/v1/carts?select=prompt,username&id=eq.{id}"
+    
+    title = None
+    description = None
+    
+    try:
+        resp = requests.get(url, headers=get_db_headers())
+        if resp.status_code == 200:
+            data = resp.json()
+            if data and len(data) > 0:
+                cart = data[0]
+                title = cart.get('prompt', 'Untitled Cart')
+                # Ensure title isn't too long for meta tag
+                if len(title) > 60:
+                    title = title[:57] + "..."
+                
+                username = cart.get('username', 'Anonymous')
+                description = f"A Siteulation cart by {username}"
+    except Exception as e:
+        print(f"Meta fetch error: {e}")
+
+    return serve_html_with_meta(title=title, description=description)
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_spa(path):
@@ -352,11 +411,8 @@ def serve_spa(path):
     if path.startswith('api/'):
         return jsonify({"error": f"API Endpoint not found: {path}"}), 404
         
-    # Serve index.html for SPA routing
-    if os.path.exists(INDEX_PATH):
-        with open(INDEX_PATH, 'r') as f:
-            return f.read()
-    return "Index file not found. Ensure backend is running from root.", 404
+    # Standard catch-all serves index.html with default meta
+    return serve_html_with_meta()
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
