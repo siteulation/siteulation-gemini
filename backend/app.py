@@ -1,22 +1,29 @@
 import os
 import json
+import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from supabase import create_client, Client
 from google import genai
 from google.genai import types
 
-# Load environment variables (ensure these are set in production)
+# Load environment variables
 API_KEY = os.environ.get("APIKEY")
 SUPABASE_URL = os.environ.get("DATABASE_URL") # Supabase Project URL
-SUPABASE_KEY = os.environ.get("DATABASE_KEY") # Supabase Service Role Key (for backend writing)
+SUPABASE_KEY = os.environ.get("DATABASE_KEY") # Supabase Service Role Key
 
 app = Flask(__name__)
 CORS(app)
 
-# Initialize Clients
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Initialize Gemini Client
 ai_client = genai.Client(api_key=API_KEY)
+
+def get_supabase_headers():
+    return {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "Content-Type": "application/json",
+        "Prefer": "return=representation"
+    }
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -38,7 +45,6 @@ def generate_cart():
         return jsonify({"error": "Missing required fields"}), 400
 
     # Map UI model selection to actual API model names
-    # Using specific models as per instructions
     model_map = {
         "gemini-2.5": "gemini-2.5-flash",
         "gemini-3": "gemini-3-flash-preview"
@@ -77,20 +83,27 @@ def generate_cart():
                 lines = lines[:-1]
             generated_code = "\n".join(lines)
 
-        # Save to Supabase using Service Role
-        # We use the Service Role key here to bypass RLS for the insert if needed, 
-        # or just to ensure backend authority.
-        db_response = supabase.table('carts').insert({
+        # Save to Supabase using REST API (bypassing python client dependency issues)
+        # Using Service Role Key allows bypassing RLS for insertion
+        url = f"{SUPABASE_URL}/rest/v1/carts"
+        payload = {
             "user_id": user_id,
             "username": username,
             "prompt": prompt,
             "model": selected_model,
             "code": generated_code
-        }).execute()
+        }
+        
+        db_response = requests.post(url, json=payload, headers=get_supabase_headers())
+        
+        if db_response.status_code not in [200, 201]:
+            raise Exception(f"Database error: {db_response.text}")
+
+        saved_cart = db_response.json()[0]
 
         return jsonify({
             "success": True, 
-            "cart": db_response.data[0]
+            "cart": saved_cart
         }), 201
 
     except Exception as e:
@@ -103,13 +116,17 @@ def get_recent_carts():
     Public endpoint to fetch recent carts.
     """
     try:
-        response = supabase.table('carts')\
-            .select('*')\
-            .order('created_at', desc=True)\
-            .limit(20)\
-            .execute()
+        # Construct URL for Supabase REST API
+        # Equivalent to: .select('*').order('created_at', desc=True).limit(20)
+        url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order=created_at.desc&limit=20"
         
-        return jsonify(response.data), 200
+        # Use simple headers for GET (apikey is sufficient usually, but we use full headers for consistency)
+        response = requests.get(url, headers=get_supabase_headers())
+        
+        if response.status_code != 200:
+            return jsonify({"error": "Failed to fetch carts"}), response.status_code
+
+        return jsonify(response.json()), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
