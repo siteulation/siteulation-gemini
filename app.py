@@ -247,14 +247,22 @@ def get_carts():
     if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
 
     sort_mode = request.args.get('sort', 'recent')
+    filter_user_id = request.args.get('user_id')
+    
+    url = f"{SUPABASE_URL}/rest/v1/carts?select=*"
+
+    # Filter by user if requested
+    if filter_user_id:
+        url += f"&user_id=eq.{filter_user_id}"
     
     # Determine sorting order
     if sort_mode == 'popular':
-        order_param = 'views.desc'
+        url += '&order=views.desc'
     else:
-        order_param = 'created_at.desc'
+        url += '&order=created_at.desc'
+        
+    url += '&limit=50'
 
-    url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order={order_param}&limit=20"
     resp = requests.get(url, headers=get_db_headers())
     try:
         return jsonify(resp.json()), resp.status_code
