@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X } from 'lucide-react';
 import { html } from '../utils.js';
 
 const ViewSite = ({ user }) => {
@@ -11,6 +11,10 @@ const ViewSite = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [viewport, setViewport] = useState('desktop');
   const [adminActionLoading, setAdminActionLoading] = useState(false);
+  
+  // Renaming State
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -19,6 +23,7 @@ const ViewSite = ({ user }) => {
         // Fetch cart data
         const data = await api.request(`/api/carts/${id}`);
         setCart(data);
+        setNewName(data.name || data.prompt);
         
         // Increment view count asynchronously (don't await or block UI)
         api.request(`/api/carts/${id}/view`, { method: 'POST' }).catch(err => {
@@ -60,6 +65,30 @@ const ViewSite = ({ user }) => {
         setAdminActionLoading(false);
     }
   };
+  
+  const handleRemix = () => {
+      // Navigate to create page with current code in state
+      navigate('/create', { 
+          state: { 
+              remixCode: cart.code,
+              originalName: cart.name || cart.prompt
+          }
+      });
+  };
+  
+  const handleRename = async () => {
+      if (!newName.trim()) return;
+      try {
+          await api.request(`/api/carts/${cart.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ name: newName })
+          });
+          setCart({ ...cart, name: newName });
+          setIsEditingName(false);
+      } catch (err) {
+          alert("Failed to rename: " + err.message);
+      }
+  };
 
   if (loading) {
     return html`
@@ -85,24 +114,48 @@ const ViewSite = ({ user }) => {
       default: return { width: '100%' };
     }
   };
+  
+  const isOwner = user && user.id === cart.user_id;
 
   return html`
     <div className="flex flex-col h-screen bg-slate-950 pt-16">
       <!-- Toolbar -->
       <div className="bg-slate-900 border-b border-white/5 px-4 h-14 flex items-center justify-between shrink-0">
-        <div className="flex items-center space-x-4">
-          <${Link} to="/" className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors">
+        <div className="flex items-center space-x-4 flex-1 mr-4 overflow-hidden">
+          <${Link} to="/" className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors shrink-0">
             <${ArrowLeft} size=${20} />
           <//>
-          <div>
-            <h1 className="text-white font-bold text-sm truncate max-w-[150px] md:max-w-xs">${cart.prompt}</h1>
-            ${cart.username === 'homelessman' && html`
-              <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider ml-1">ADMIN CREATION</span>
+          
+          <div className="flex items-center space-x-2 overflow-hidden w-full">
+            ${isEditingName ? html`
+                <div className="flex items-center space-x-1 bg-slate-800 rounded p-0.5 w-full max-w-sm">
+                    <input 
+                        type="text" 
+                        value=${newName}
+                        onChange=${(e) => setNewName(e.target.value)}
+                        className="bg-transparent border-none focus:ring-0 text-white text-sm px-2 py-1 w-full"
+                        autoFocus
+                    />
+                    <button onClick=${handleRename} className="p-1 text-green-400 hover:bg-white/10 rounded"><${Check} size=${14} /></button>
+                    <button onClick=${() => setIsEditingName(false)} className="p-1 text-red-400 hover:bg-white/10 rounded"><${X} size=${14} /></button>
+                </div>
+            ` : html`
+                <h1 className="text-white font-bold text-sm truncate max-w-[200px] md:max-w-md" title=${cart.name || cart.prompt}>
+                    ${cart.name || cart.prompt}
+                </h1>
+                ${isOwner && html`
+                    <button onClick=${() => setIsEditingName(true)} className="text-slate-500 hover:text-primary-400 transition-colors p-1">
+                        <${Pencil} size=${12} />
+                    </button>
+                `}
+                ${cart.username === 'homelessman' && html`
+                  <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider ml-1 shrink-0">ADMIN CREATION</span>
+                `}
             `}
           </div>
         </div>
 
-        <div className="flex items-center space-x-1 bg-slate-800/50 rounded-lg p-1 border border-white/5">
+        <div className="flex items-center space-x-1 bg-slate-800/50 rounded-lg p-1 border border-white/5 shrink-0 hidden md:flex">
           <button
             onClick=${() => setViewport('desktop')}
             className=${`p-1.5 rounded ${viewport === 'desktop' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
@@ -123,9 +176,19 @@ const ViewSite = ({ user }) => {
           </button>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 ml-4 shrink-0">
+           ${user && html`
+             <button 
+                onClick=${handleRemix}
+                className="flex items-center space-x-1 px-3 py-1.5 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 border border-purple-500/20 rounded-lg text-xs font-bold transition-all"
+             >
+                <${GitFork} size=${14} />
+                <span>Remix</span>
+             </button>
+           `}
+
            ${user?.is_admin && html`
-             <div className="flex items-center space-x-1 mr-4 border-r border-white/10 pr-4">
+             <div className="flex items-center space-x-1 mx-2 border-r border-l border-white/10 px-2">
                 <button 
                   onClick=${handleAdminDelete} 
                   disabled=${adminActionLoading}

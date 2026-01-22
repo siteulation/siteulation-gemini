@@ -291,6 +291,33 @@ def delete_cart(id):
         
     return jsonify({"success": True}), 200
 
+@app.route('/api/carts/<id>', methods=['PATCH'])
+def update_cart(id):
+    user = verify_token(request)
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json or {}
+    new_name = data.get('name')
+    
+    if not new_name:
+        return jsonify({"error": "Name required"}), 400
+
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+    
+    # RLS Policies on Supabase side should technically handle the user_id check
+    # But explicitly doing it here for the endpoint logic is safer/clearer
+    
+    url = f"{SUPABASE_URL}/rest/v1/carts?id=eq.{id}&user_id=eq.{user['id']}"
+    payload = {"name": new_name}
+    
+    resp = requests.patch(url, json=payload, headers=get_db_headers())
+    
+    if resp.status_code >= 400:
+        return jsonify({"error": "Update failed (Check permission)", "details": resp.text}), resp.status_code
+
+    return jsonify({"success": True}), 200
+
+
 @app.route('/api/carts/<id>/view', methods=['POST'])
 def increment_cart_view(id):
     if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
@@ -325,13 +352,31 @@ def generate_cart():
 
     data = request.json or {}
     prompt = data.get('prompt')
+    name = data.get('name') or prompt # Default name to prompt if not set
     model_choice = data.get('model', 'gemini-2.5')
+    remix_code = data.get('remix_code') # The code from the original cart if remixing
     
     if not prompt:
         return jsonify({"error": "Prompt required"}), 400
 
     model_name = "gemini-3-flash-preview" if model_choice == "gemini-3" else "gemini-2.5-flash"
     
+    # Construct prompt based on if it is a remix
+    if remix_code:
+        final_prompt = f"""
+I want to Remix/Modify this existing HTML application code.
+
+EXISTING CODE:
+{remix_code}
+
+USER REQUEST:
+{prompt}
+
+Generate the updated single-file HTML app.
+"""
+    else:
+        final_prompt = prompt
+
     system_instruction = (
         "You are Siteulation AI. Generate a SINGLE-FILE HTML app. "
         "Include CSS in <style> and JS in <script>. "
@@ -341,7 +386,7 @@ def generate_cart():
     try:
         response = ai_client.models.generate_content(
             model=model_name,
-            contents=prompt,
+            contents=final_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 temperature=0.7
@@ -354,6 +399,7 @@ def generate_cart():
         payload = {
             "user_id": user['id'],
             "username": user.get('user_metadata', {}).get('username', 'Anonymous'),
+            "name": name,
             "prompt": prompt,
             "model": model_name,
             "code": code,
@@ -381,7 +427,7 @@ def serve_site_preview(id):
         return serve_html_with_meta() # Fallback
 
     # Fetch cart details to get title/desc
-    url = f"{SUPABASE_URL}/rest/v1/carts?select=prompt,username&id=eq.{id}"
+    url = f"{SUPABASE_URL}/rest/v1/carts?select=name,prompt,username&id=eq.{id}"
     
     title = None
     description = None
@@ -392,8 +438,10 @@ def serve_site_preview(id):
             data = resp.json()
             if data and len(data) > 0:
                 cart = data[0]
-                title = cart.get('prompt', 'Untitled Cart')
-                # Ensure title isn't too long for meta tag
+                # Use Name if available, otherwise Prompt
+                display_name = cart.get('name') or cart.get('prompt', 'Untitled Cart')
+                
+                title = display_name
                 if len(title) > 60:
                     title = title[:57] + "..."
                 

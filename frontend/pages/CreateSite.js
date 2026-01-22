@@ -1,16 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ModelType } from '../types.js';
-import { Sparkles, AlertTriangle, Zap, Cpu } from 'lucide-react';
+import { Sparkles, AlertTriangle, Zap, Cpu, GitFork } from 'lucide-react';
 import { html } from '../utils.js';
 
 const CreateSite = () => {
   const [prompt, setPrompt] = useState('');
+  const [name, setName] = useState('');
   const [model, setModel] = useState(ModelType.GEMINI_2_5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Remix state
+  const [remixData, setRemixData] = useState(null);
+
+  useEffect(() => {
+    if (location.state && location.state.remixCode) {
+        setRemixData({
+            code: location.state.remixCode,
+            originalName: location.state.originalName || 'Original'
+        });
+        // Pre-fill name for convenience
+        setName(`Remix of ${location.state.originalName || 'Project'}`);
+    }
+  }, [location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,7 +37,9 @@ const CreateSite = () => {
     try {
       const payload = {
         prompt,
-        model
+        name,
+        model,
+        remix_code: remixData ? remixData.code : null
       };
 
       // api.request now returns the data object directly, or throws an error
@@ -42,8 +61,12 @@ const CreateSite = () => {
     <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="mb-10">
-          <h1 className="text-4xl font-bold text-white mb-2">Create Cart</h1>
-          <p className="text-slate-400">Configure parameters for your new digital environment.</p>
+          <h1 className="text-4xl font-bold text-white mb-2">
+            ${remixData ? 'Remix Cart' : 'Create Cart'}
+          </h1>
+          <p className="text-slate-400">
+            ${remixData ? `Modifying existing code from "${remixData.originalName}".` : 'Configure parameters for your new digital environment.'}
+          </p>
         </div>
 
         ${error && html`
@@ -52,12 +75,35 @@ const CreateSite = () => {
             <span>${error}</span>
           </div>
         `}
+        
+        ${remixData && html`
+           <div className="mb-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-center space-x-3 text-purple-200">
+             <${GitFork} size=${20} />
+             <span>Remix Mode Active: Your prompt will be applied to the existing codebase.</span>
+             <button onClick=${() => { setRemixData(null); setName(''); }} className="ml-auto text-xs underline hover:text-white">Cancel Remix</button>
+           </div>
+        `}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <!-- Form Section -->
           <div className="lg:col-span-2">
-            <form onSubmit=${handleSubmit} className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 backdrop-blur-sm">
-              <div className="mb-8">
+            <form onSubmit=${handleSubmit} className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 backdrop-blur-sm space-y-6">
+              
+              <div>
+                <label className="block text-sm font-mono text-slate-400 mb-3 uppercase tracking-wider">
+                  Project Name
+                </label>
+                <input
+                    type="text"
+                    value=${name}
+                    onChange=${(e) => setName(e.target.value)}
+                    className="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-600 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+                    placeholder="e.g., Cyberpunk Dashboard"
+                    required
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-mono text-slate-400 mb-3 uppercase tracking-wider">
                   Prompt
                 </label>
@@ -68,7 +114,7 @@ const CreateSite = () => {
                     required
                     rows=${8}
                     className="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-5 text-white placeholder-slate-600 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all resize-none text-lg leading-relaxed"
-                    placeholder="Describe the application to simulate..."
+                    placeholder=${remixData ? "Describe how you want to modify this cart..." : "Describe the application to simulate..."}
                   />
                   <div className="absolute bottom-4 right-4 text-xs text-slate-600 font-mono">
                     ${prompt.length} CHARS
@@ -88,7 +134,7 @@ const CreateSite = () => {
                     <span>Compiling Assets...</span>
                   ` : html`
                     <${Sparkles} size=${20} />
-                    <span>Generate</span>
+                    <span>${remixData ? 'Generate Remix' : 'Generate'}</span>
                   `}
                 </div>
               </button>

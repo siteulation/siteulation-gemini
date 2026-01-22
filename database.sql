@@ -15,6 +15,7 @@ create table public.carts (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references auth.users(id) not null,
   username text, -- Stored denormalized for easier fetching
+  name text, -- Custom name for the website
   prompt text not null,
   model text not null,
   code text not null,
@@ -35,6 +36,10 @@ create policy "Carts are public" on public.carts
 create policy "Users can insert own carts" on public.carts
   for insert with check (auth.uid() = user_id);
   
+-- Allow users to update their own carts (e.g., for renaming)
+create policy "Users can update own carts" on public.carts
+  for update using (auth.uid() = user_id);
+
 -- Allow the service role (backend) to update views, or create specific policy
 -- For simplicity, we rely on the backend using the Service Role Key which bypasses RLS for updates
 

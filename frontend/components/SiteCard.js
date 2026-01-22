@@ -24,6 +24,9 @@ export const SiteCard = ({ cart, currentUser, onDelete }) => {
 
   const isAdminCreator = cart.username === 'homelessman';
   const isAdminViewer = currentUser?.is_admin;
+  
+  // Use name if available, otherwise fallback to prompt
+  const displayName = cart.name || cart.prompt;
 
   return html`
     <${Link} to=${`/site/${cart.id}`} className="block group relative">
@@ -61,7 +64,7 @@ export const SiteCard = ({ cart, currentUser, onDelete }) => {
           </div>
           
           <h3 className="text-lg font-bold text-white mb-3 line-clamp-2 group-hover:text-primary-400 transition-colors leading-snug">
-            ${cart.prompt}
+            ${displayName}
           </h3>
           
           <div className="mt-auto pt-4 border-t border-white/5 flex items-center justify-between text-xs text-slate-500 font-mono">
