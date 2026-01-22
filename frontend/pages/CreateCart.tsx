@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../services/supabase';
+import { supabase } from '../services/supabase.ts';
 import { useNavigate } from 'react-router-dom';
-import { BACKEND_URL } from '../constants';
-import { ModelType } from '../types';
+import { BACKEND_URL } from '../constants.ts';
+import { ModelType } from '../types.ts';
 import { Sparkles, AlertCircle } from 'lucide-react';
+import { html } from '../utils.ts';
 
-const CreateCart: React.FC = () => {
+const CreateCart = () => {
   const [prompt, setPrompt] = useState('');
-  const [model, setModel] = useState<ModelType>(ModelType.GEMINI_2_5);
+  const [model, setModel] = useState(ModelType.GEMINI_2_5);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,7 +30,7 @@ const CreateCart: React.FC = () => {
     checkUser();
   }, [navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -67,14 +68,14 @@ const CreateCart: React.FC = () => {
       // Navigate to the new cart
       navigate(`/cart/${data.cart.id}`);
 
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
+  return html`
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8 text-center">
@@ -82,24 +83,24 @@ const CreateCart: React.FC = () => {
           <p className="text-gray-400">Describe your mini-app and let Gemini build it for you.</p>
         </div>
 
-        {error && (
+        ${error && html`
           <div className="mb-6 p-4 bg-red-900/30 border border-red-500/50 rounded-xl flex items-center space-x-3 text-red-200">
-            <AlertCircle size={20} />
-            <span>{error}</span>
+            <${AlertCircle} size=${20} />
+            <span>${error}</span>
           </div>
-        )}
+        `}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit=${handleSubmit} className="space-y-6">
           <div className="bg-gray-800 p-6 rounded-2xl border border-gray-700 shadow-xl">
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 What should we build?
               </label>
               <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
+                value=${prompt}
+                onChange=${(e) => setPrompt(e.target.value)}
                 required
-                rows={6}
+                rows=${6}
                 className="w-full bg-gray-900 border border-gray-600 rounded-xl p-4 text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
                 placeholder="e.g., A pomodoro timer with a dark theme and sound notifications..."
               />
@@ -112,8 +113,8 @@ const CreateCart: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   type="button"
-                  onClick={() => setModel(ModelType.GEMINI_2_5)}
-                  className={`p-4 rounded-xl border text-left transition-all ${
+                  onClick=${() => setModel(ModelType.GEMINI_2_5)}
+                  className=${`p-4 rounded-xl border text-left transition-all ${
                     model === ModelType.GEMINI_2_5
                       ? 'bg-blue-600/20 border-blue-500 ring-1 ring-blue-500'
                       : 'bg-gray-900 border-gray-700 hover:border-gray-500'
@@ -125,8 +126,8 @@ const CreateCart: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => setModel(ModelType.GEMINI_3)}
-                  className={`p-4 rounded-xl border text-left transition-all ${
+                  onClick=${() => setModel(ModelType.GEMINI_3)}
+                  className=${`p-4 rounded-xl border text-left transition-all ${
                     model === ModelType.GEMINI_3
                       ? 'bg-purple-600/20 border-purple-500 ring-1 ring-purple-500'
                       : 'bg-gray-900 border-gray-700 hover:border-gray-500'
@@ -140,26 +141,22 @@ const CreateCart: React.FC = () => {
 
             <button
               type="submit"
-              disabled={loading || !!error}
+              disabled=${loading || !!error}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold py-4 rounded-xl transition-all transform hover:scale-[1.01] shadow-lg hover:shadow-blue-600/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Generating...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles size={20} />
-                  <span>Generate Cart</span>
-                </>
-              )}
+              ${loading ? html`
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <span>Generating...</span>
+              ` : html`
+                <${Sparkles} size=${20} />
+                <span>Generate Cart</span>
+              `}
             </button>
           </div>
         </form>
       </div>
     </div>
-  );
+  `;
 };
 
 export default CreateCart;

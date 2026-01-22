@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { BACKEND_URL } from '../constants';
-import { Cart } from '../types';
-import { CartCard } from '../components/CartCard';
+import { BACKEND_URL } from '../constants.ts';
+import { CartCard } from '../components/CartCard.tsx';
 import { Loader2 } from 'lucide-react';
+import { html } from '../utils.ts';
 
-const Home: React.FC = () => {
-  const [carts, setCarts] = useState<Cart[]>([]);
+const Home = () => {
+  const [carts, setCarts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ const Home: React.FC = () => {
     fetchCarts();
   }, []);
 
-  return (
+  return html`
     <div className="container mx-auto px-4 py-8">
       <div className="mb-10 text-center">
         <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 mb-4">
@@ -42,23 +42,21 @@ const Home: React.FC = () => {
         <div className="h-px bg-gray-700 flex-grow ml-4"></div>
       </div>
 
-      {loading ? (
+      ${loading ? html`
         <div className="flex justify-center items-center py-20">
-          <Loader2 className="animate-spin text-blue-500" size={48} />
+          <${Loader2} className="animate-spin text-blue-500" size=${48} />
         </div>
-      ) : carts.length === 0 ? (
+      ` : carts.length === 0 ? html`
         <div className="text-center py-16 bg-gray-800/50 rounded-2xl border border-gray-700 border-dashed">
           <p className="text-gray-400 text-lg">No carts created yet. Be the first!</p>
         </div>
-      ) : (
+      ` : html`
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {carts.map((cart) => (
-            <CartCard key={cart.id} cart={cart} />
-          ))}
+          ${carts.map((cart) => html`<${CartCard} key=${cart.id} cart=${cart} />`)}
         </div>
-      )}
+      `}
     </div>
-  );
+  `;
 };
 
 export default Home;

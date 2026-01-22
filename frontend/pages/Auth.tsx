@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
-import { supabase } from '../services/supabase';
+import { supabase } from '../services/supabase.ts';
 import { useNavigate } from 'react-router-dom';
+import { html } from '../utils.ts';
 
-const Auth: React.FC = () => {
+const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState(null);
+  const [message, setMessage] = useState(null);
   const navigate = useNavigate();
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -41,7 +42,7 @@ const Auth: React.FC = () => {
         setMessage("Registration successful! Please check your email to verify your account before logging in.");
         setIsLogin(true); // Switch to login view
       }
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
@@ -52,53 +53,56 @@ const Auth: React.FC = () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
+        options: {
+            redirectTo: window.location.origin
+        }
       });
       if (error) throw error;
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message);
     }
   };
 
-  return (
+  return html`
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-gray-800 rounded-2xl border border-gray-700 shadow-2xl p-8">
         <h2 className="text-3xl font-bold text-center mb-8 text-white">
-          {isLogin ? 'Welcome Back' : 'Create Account'}
+          ${isLogin ? 'Welcome Back' : 'Create Account'}
         </h2>
 
-        {error && (
+        ${error && html`
           <div className="mb-4 p-3 bg-red-900/50 border border-red-500 text-red-200 rounded-lg text-sm">
-            {error}
+            ${error}
           </div>
-        )}
+        `}
 
-        {message && (
+        ${message && html`
           <div className="mb-4 p-3 bg-green-900/50 border border-green-500 text-green-200 rounded-lg text-sm">
-            {message}
+            ${message}
           </div>
-        )}
+        `}
 
-        <form onSubmit={handleAuth} className="space-y-4">
-          {!isLogin && (
+        <form onSubmit=${handleAuth} className="space-y-4">
+          ${!isLogin && html`
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-1">Username</label>
               <input
                 type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required={!isLogin}
+                value=${username}
+                onChange=${(e) => setUsername(e.target.value)}
+                required=${!isLogin}
                 className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                 placeholder="johndoe"
               />
             </div>
-          )}
+          `}
           
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
             <input
               type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value=${email}
+              onChange=${(e) => setEmail(e.target.value)}
               required
               className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               placeholder="you@example.com"
@@ -109,10 +113,10 @@ const Auth: React.FC = () => {
             <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
             <input
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value=${password}
+              onChange=${(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength=${6}
               className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
               placeholder="••••••••"
             />
@@ -120,10 +124,10 @@ const Auth: React.FC = () => {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled=${loading}
             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 rounded-lg transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}
+            ${loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}
           </button>
         </form>
 
@@ -138,7 +142,7 @@ const Auth: React.FC = () => {
           </div>
 
           <button
-            onClick={handleGoogleLogin}
+            onClick=${handleGoogleLogin}
             className="mt-6 w-full flex items-center justify-center space-x-2 bg-white text-gray-900 hover:bg-gray-100 font-semibold py-3 rounded-lg transition-colors"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -164,17 +168,17 @@ const Auth: React.FC = () => {
         </div>
 
         <p className="mt-8 text-center text-sm text-gray-400">
-          {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
+          ${isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
           <button
-            onClick={() => setIsLogin(!isLogin)}
+            onClick=${() => setIsLogin(!isLogin)}
             className="text-blue-400 hover:text-blue-300 font-medium"
           >
-            {isLogin ? 'Sign up' : 'Log in'}
+            ${isLogin ? 'Sign up' : 'Log in'}
           </button>
         </p>
       </div>
     </div>
-  );
+  `;
 };
 
 export default Auth;

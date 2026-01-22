@@ -2,21 +2,21 @@ import os
 import json
 import requests
 import mimetypes
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 from google import genai
 from google.genai import types
 
 # Load environment variables
 API_KEY = os.environ.get("APIKEY")
-SUPABASE_URL = os.environ.get("DATABASE_URL") # Supabase Project URL
-SUPABASE_KEY = os.environ.get("DATABASE_KEY") # Supabase Service Role Key
+SUPABASE_URL = os.environ.get("DATABASE_URL")
+SUPABASE_KEY = os.environ.get("DATABASE_KEY")
 
 # Configure Flask to serve static files from the 'frontend' directory
 app = Flask(__name__, static_folder='frontend', static_url_path='/frontend')
 CORS(app)
 
-# Ensure .tsx files are served with the correct MIME type so browsers (or bundlers) accept them
+# Ensure .tsx files are served with the correct MIME type so browsers accept them as JS
 mimetypes.add_type('application/javascript', '.tsx')
 mimetypes.add_type('application/javascript', '.ts')
 
@@ -33,7 +33,27 @@ def get_supabase_headers():
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    # Read index.html
+    try:
+        with open('index.html', 'r') as f:
+            content = f.read()
+            
+        # Inject environment variables for Frontend
+        # Note: In production, ensure you are only exposing the ANON key, not service role key if possible.
+        env_script = f"""
+        <script>
+          window.env = {{
+            SUPABASE_URL: "{SUPABASE_URL}",
+            SUPABASE_KEY: "{SUPABASE_KEY}"
+          }};
+        </script>
+        """
+        # Inject before </head>
+        content = content.replace('</head>', f'{env_script}</head>')
+        
+        return content
+    except FileNotFoundError:
+        return "index.html not found", 404
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -41,10 +61,6 @@ def health_check():
 
 @app.route('/api/generate', methods=['POST'])
 def generate_cart():
-    """
-    Protected endpoint. 
-    Expects: { prompt: str, model: str, userId: str, username: str }
-    """
     data = request.json
     prompt = data.get('prompt')
     model_choice = data.get('model')
@@ -54,7 +70,6 @@ def generate_cart():
     if not all([prompt, model_choice, user_id]):
         return jsonify({"error": "Missing required fields"}), 400
 
-    # Map UI model selection to actual API model names
     model_map = {
         "gemini-2.5": "gemini-2.5-flash",
         "gemini-3": "gemini-3-flash-preview"
@@ -72,7 +87,6 @@ def generate_cart():
     )
 
     try:
-        # Generate content using Gemini
         response = ai_client.models.generate_content(
             model=selected_model,
             contents=prompt,
@@ -84,7 +98,7 @@ def generate_cart():
         
         generated_code = response.text
 
-        # Clean up if model accidentally included markdown
+        # Clean up markdown
         if generated_code.startswith("```"):
             lines = generated_code.splitlines()
             if lines[0].strip().startswith("```"):
@@ -93,8 +107,6 @@ def generate_cart():
                 lines = lines[:-1]
             generated_code = "\n".join(lines)
 
-        # Save to Supabase using REST API (bypassing python client dependency issues)
-        # Using Service Role Key allows bypassing RLS for insertion
         url = f"{SUPABASE_URL}/rest/v1/carts"
         payload = {
             "user_id": user_id,
@@ -122,15 +134,8 @@ def generate_cart():
 
 @app.route('/api/carts', methods=['GET'])
 def get_recent_carts():
-    """
-    Public endpoint to fetch recent carts.
-    """
     try:
-        # Construct URL for Supabase REST API
-        # Equivalent to: .select('*').order('created_at', desc=True).limit(20)
         url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order=created_at.desc&limit=20"
-        
-        # Use simple headers for GET (apikey is sufficient usually, but we use full headers for consistency)
         response = requests.get(url, headers=get_supabase_headers())
         
         if response.status_code != 200:
@@ -141,5 +146,4 @@ def get_recent_carts():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # For local development
     app.run(port=5000, debug=True)

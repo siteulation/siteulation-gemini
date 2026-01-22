@@ -1,2 +1,3 @@
-// Replace with your actual Python backend URL
-export const BACKEND_URL = 'http://localhost:5000';
+
+// This assumes the backend is serving from the same origin
+export const BACKEND_URL = ''; 
