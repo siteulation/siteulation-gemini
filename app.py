@@ -106,19 +106,45 @@ def health_check():
 @app.route('/api/auth/signup', methods=['POST'])
 def auth_signup():
     data = request.json or {}
-    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY: 
+        return jsonify({"error": "Server Config Missing (DB/KEY)"}), 500
 
-    url = f"{SUPABASE_URL}/auth/v1/signup"
-    payload = {
+    # 1. Create User via Admin API (bypasses email confirmation)
+    admin_url = f"{SUPABASE_URL}/auth/v1/admin/users"
+    admin_headers = {
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json"
+    }
+    create_payload = {
         "email": data.get('email'),
         "password": data.get('password'),
-        "data": {"username": data.get('username')}
+        "email_confirm": True, # Force auto-confirmation
+        "user_metadata": {"username": data.get('username')}
     }
-    resp = requests.post(url, json=payload, headers=get_auth_headers())
+    
+    resp = requests.post(admin_url, json=create_payload, headers=admin_headers)
+    
+    if resp.status_code >= 400:
+        try:
+            err = resp.json()
+            msg = err.get("msg") or err.get("error_description") or resp.text
+        except:
+            msg = resp.text
+        return jsonify({"error": msg}), resp.status_code
+
+    # 2. Auto-Sign In to get the token immediately
+    token_url = f"{SUPABASE_URL}/auth/v1/token?grant_type=password"
+    token_payload = {
+        "email": data.get('email'), 
+        "password": data.get('password')
+    }
+    token_resp = requests.post(token_url, json=token_payload, headers=get_auth_headers())
+    
     try:
-        return jsonify(resp.json()), resp.status_code
+        return jsonify(token_resp.json()), token_resp.status_code
     except:
-        return jsonify({"error": resp.text}), resp.status_code
+        return jsonify({"error": "User created but auto-login failed"}), 500
 
 @app.route('/api/auth/signin', methods=['POST'])
 def auth_signin():

@@ -24,12 +24,13 @@ const Auth = ({ setUser }) => {
       if (view === 'signup') {
         const data = await api.auth.signUp(email, password, username);
         
-        // If Supabase returns a session immediately (auto confirm)
-        if (data.session) {
+        // If we get an access_token, it means the user was auto-confirmed and logged in
+        if (data.access_token) {
             api.setToken(data.access_token);
             setUser(data.user);
             navigate('/');
         } else {
+            // Fallback for manual confirm (shouldn't happen with current backend)
             setError('Account created! Please check your email to verify before signing in.');
             setView('signin');
         }
