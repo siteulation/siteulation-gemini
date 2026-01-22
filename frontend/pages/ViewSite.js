@@ -14,13 +14,9 @@ const ViewSite = () => {
     const fetchCart = async () => {
       if (!id) return;
       try {
-        const response = await api.request(`/api/carts/${id}`);
-        if (response.ok) {
-          const data = await response.json();
-          setCart(data);
-        } else {
-          console.error("Cart not found");
-        }
+        // api.request returns the data object directly
+        const data = await api.request(`/api/carts/${id}`);
+        setCart(data);
       } catch (error) {
         console.error("Error fetching site:", error);
       } finally {

@@ -1,29 +1,73 @@
 import os
 import requests
 import mimetypes
+import traceback
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
 from google import genai
 from google.genai import types
 
-# Load environment variables
+# --- Configuration & Validation ---
 API_KEY = os.environ.get("APIKEY")
 SUPABASE_URL = os.environ.get("DATABASE_URL")
-SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY") # For DB Access (Admin)
-SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY") # For Auth Handshake
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY") # Secret Key
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY") # Public Key
+
+# Validate critical env vars on startup
+missing_vars = []
+if not API_KEY: missing_vars.append("APIKEY")
+if not SUPABASE_URL: missing_vars.append("DATABASE_URL")
+if not SUPABASE_SERVICE_ROLE_KEY: missing_vars.append("DATABASE_KEY")
+if not SUPABASE_ANON_KEY: missing_vars.append("SUPABASE_ANON_KEY")
+
+if missing_vars:
+    print(f"CRITICAL WARNING: Missing environment variables: {', '.join(missing_vars)}")
+    print("The application may crash or malfunction.")
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='/frontend')
 CORS(app)
 
 mimetypes.add_type('application/javascript', '.js')
 
-# Initialize Gemini Client
-ai_client = genai.Client(api_key=API_KEY)
+# Initialize Gemini Client (Handle missing key gracefully)
+ai_client = None
+if API_KEY:
+    try:
+        ai_client = genai.Client(api_key=API_KEY)
+    except Exception as e:
+        print(f"Failed to initialize Gemini Client: {e}")
+
+# --- Global Error Handlers ---
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    """Return JSON instead of HTML for HTTP 500 errors"""
+    # Pass through HTTP errors
+    if isinstance(e, HTTPException):
+        return e
+    
+    # Log the full error
+    print("INTERNAL SERVER ERROR:")
+    traceback.print_exc()
+    
+    # Return JSON response
+    return jsonify({
+        "error": "Internal Server Error",
+        "details": str(e)
+    }), 500
+
+@app.errorhandler(404)
+def not_found(e):
+    # If the request is for the API, return JSON
+    if request.path.startswith('/api/'):
+        return jsonify({"error": "API Endpoint not found"}), 404
+    # Otherwise fallback to index (Handled by the root route usually, but just in case)
+    return "Page not found", 404
 
 # --- Helpers ---
 
 def get_db_headers():
-    """Headers for DB operations (Service Role - Bypass RLS)"""
     return {
         "apikey": SUPABASE_SERVICE_ROLE_KEY,
         "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
@@ -32,28 +76,29 @@ def get_db_headers():
     }
 
 def get_auth_headers():
-    """Headers for Auth Handshake (Anon Key)"""
     return {
         "apikey": SUPABASE_ANON_KEY,
         "Content-Type": "application/json"
     }
 
-def verify_token(request):
-    """Verify the Bearer token sent from Frontend against Supabase"""
-    auth_header = request.headers.get('Authorization')
+def verify_token(req):
+    auth_header = req.headers.get('Authorization')
     if not auth_header:
         return None
     
     token = auth_header.split(" ")[1] if " " in auth_header else auth_header
     
-    # Verify via Supabase Auth API
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        raise Exception("Server misconfigured: Missing Supabase URL/Key")
+
     url = f"{SUPABASE_URL}/auth/v1/user"
     headers = {
         "apikey": SUPABASE_ANON_KEY,
         "Authorization": f"Bearer {token}"
     }
     
-    response = requests.get(url, headers=headers)
+    # We use a session with no retries to fail fast
+    response = requests.get(url, headers=headers, timeout=10)
     if response.status_code == 200:
         return response.json()
     return None
@@ -64,15 +109,16 @@ def verify_token(request):
 def index():
     try:
         with open('index.html', 'r') as f:
-            content = f.read()
-        # Remove any previous injection logic, we don't need it.
-        return content
+            return f.read()
     except FileNotFoundError:
-        return "index.html not found", 404
+        return "index.html not found. Ensure you are running from the project root.", 404
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({"status": "ok"}), 200
+    return jsonify({
+        "status": "ok", 
+        "configured": not bool(missing_vars)
+    }), 200
 
 # --- Auth Routes ---
 
@@ -83,6 +129,9 @@ def auth_signup():
     password = data.get('password')
     username = data.get('username')
     
+    if not SUPABASE_URL:
+        return jsonify({"error": "Database URL not configured"}), 500
+
     url = f"{SUPABASE_URL}/auth/v1/signup"
     payload = {
         "email": email,
@@ -91,38 +140,69 @@ def auth_signup():
     }
     
     response = requests.post(url, json=payload, headers=get_auth_headers())
-    return jsonify(response.json()), response.status_code
+    
+    # Try to parse JSON from Supabase, fallback to text if it fails
+    try:
+        resp_data = response.json()
+    except:
+        resp_data = {"error": response.text}
+        
+    return jsonify(resp_data), response.status_code
 
 @app.route('/api/auth/signin', methods=['POST'])
 def auth_signin():
-    data = request.json
+    data = request.json or {}
     email = data.get('email')
     password = data.get('password')
+    
+    if not email or not password:
+        return jsonify({"error": "Email and password required"}), 400
+
+    if not SUPABASE_URL:
+        return jsonify({"error": "Database URL not configured"}), 500
     
     url = f"{SUPABASE_URL}/auth/v1/token?grant_type=password"
     payload = {"email": email, "password": password}
     
     response = requests.post(url, json=payload, headers=get_auth_headers())
-    return jsonify(response.json()), response.status_code
+    
+    try:
+        resp_data = response.json()
+    except:
+        resp_data = {"error": response.text}
+
+    return jsonify(resp_data), response.status_code
 
 @app.route('/api/auth/user', methods=['GET'])
 def auth_user():
-    user = verify_token(request)
-    if user:
-        return jsonify(user), 200
-    return jsonify({"error": "Invalid token"}), 401
+    try:
+        user = verify_token(request)
+        if user:
+            return jsonify(user), 200
+        return jsonify({"error": "Invalid token"}), 401
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --- Data Routes ---
 
 @app.route('/api/carts', methods=['GET'])
 def get_carts():
-    # Public route, return recent carts
+    if not SUPABASE_URL:
+        return jsonify({"error": "Database URL not configured"}), 500
+
     url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order=created_at.desc&limit=20"
     response = requests.get(url, headers=get_db_headers())
-    return jsonify(response.json()), response.status_code
+    
+    try:
+        return jsonify(response.json()), response.status_code
+    except:
+        return jsonify({"error": "Failed to parse database response", "details": response.text}), 500
 
 @app.route('/api/carts/<id>', methods=['GET'])
 def get_cart_by_id(id):
+    if not SUPABASE_URL:
+        return jsonify({"error": "Database URL not configured"}), 500
+
     url = f"{SUPABASE_URL}/rest/v1/carts?select=*&id=eq.{id}"
     response = requests.get(url, headers=get_db_headers())
     data = response.json()
@@ -132,16 +212,17 @@ def get_cart_by_id(id):
 
 @app.route('/api/generate', methods=['POST'])
 def generate_cart():
-    # Verify User
     user = verify_token(request)
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
+        
+    if not ai_client:
+         return jsonify({"error": "AI Client not initialized (Missing API Key)"}), 500
 
     data = request.json
     prompt = data.get('prompt')
     model_choice = data.get('model')
     
-    # Use user data from the verified token
     user_id = user['id']
     username = user.get('user_metadata', {}).get('username', 'Anonymous')
 
@@ -174,7 +255,6 @@ def generate_cart():
         if generated_code.startswith("```"):
             generated_code = generated_code.replace("```html", "").replace("```", "")
 
-        # Save to DB
         url = f"{SUPABASE_URL}/rest/v1/carts"
         payload = {
             "user_id": user_id,
@@ -187,12 +267,13 @@ def generate_cart():
         db_response = requests.post(url, json=payload, headers=get_db_headers())
         
         if db_response.status_code not in [200, 201]:
-            raise Exception(f"Database error: {db_response.text}")
+            raise Exception(f"Database Save Error: {db_response.text}")
 
         return jsonify({"success": True, "cart": db_response.json()[0]}), 201
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Generation Error: {e}")
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

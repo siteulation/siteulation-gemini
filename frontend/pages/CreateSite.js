@@ -23,16 +23,11 @@ const CreateSite = () => {
         model
       };
 
-      const response = await api.request('/api/generate', {
+      // api.request now returns the data object directly, or throws an error
+      const data = await api.request('/api/generate', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Generation Failed');
-      }
 
       navigate(`/site/${data.cart.id}`);
 
