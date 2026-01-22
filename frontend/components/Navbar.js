@@ -40,7 +40,7 @@ const Navbar = ({ user }) => {
               <div className="flex items-center space-x-3">
                 <div className="flex flex-col items-end hidden md:flex">
                   <span className="text-sm font-medium text-slate-200">
-                    ${user.user_metadata.username || user.email?.split('@')[0]}
+                    ${user?.user_metadata?.username || user?.email?.split('@')[0] || 'User'}
                   </span>
                   <span className="text-[10px] text-primary-400 font-mono">PRO ACCOUNT</span>
                 </div>

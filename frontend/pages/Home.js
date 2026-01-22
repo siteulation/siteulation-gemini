@@ -15,7 +15,13 @@ const Home = () => {
         const response = await fetch(`${BACKEND_URL}/api/carts`);
         if (response.ok) {
           const data = await response.json();
-          setCarts(data);
+          // Ensure data is an array before setting state
+          if (Array.isArray(data)) {
+            setCarts(data);
+          } else {
+            console.error("Expected array of carts, got:", data);
+            setCarts([]);
+          }
         }
       } catch (error) {
         console.error("Error fetching sites:", error);
