@@ -2,7 +2,7 @@ import os
 import requests
 import mimetypes
 import traceback
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 from google import genai
@@ -429,6 +429,10 @@ Generate the updated single-file HTML app.
         return jsonify({"error": str(e)}), 500
 
 # --- Serving & Meta Injection ---
+
+@app.route('/siteulationlogo.png')
+def serve_logo():
+    return send_from_directory(BASE_DIR, 'siteulationlogo.png')
 
 @app.route('/site/<id>', methods=['GET'])
 def serve_site_preview(id):
