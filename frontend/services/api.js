@@ -12,14 +12,13 @@ async function handleResponse(response) {
     }
     return data;
   } else {
-    // Non-JSON response (likely HTML error page from a crash or 404)
+    // Non-JSON response
     const text = await response.text();
-    // Try to extract a meaningful message if it's standard HTML
-    let errorMsg = `Server Error (${response.status})`;
-    if (response.status === 404) errorMsg = "Endpoint not found (404)";
-    if (response.status === 500) errorMsg = "Internal Server Error (500) - Check backend console";
+    console.error("Non-JSON API Response:", response.status, response.url, text);
     
-    console.error("Non-JSON Response detected:", text);
+    let errorMsg = `Server Error (${response.status})`;
+    if (response.status === 404) errorMsg = `Endpoint not found (404): ${response.url}`;
+    
     throw new Error(errorMsg);
   }
 }
@@ -51,13 +50,11 @@ export const api = {
 
       if (response.status === 401) {
         localStorage.removeItem(TOKEN_KEY);
-        // Optional: redirect to auth
       }
 
       return handleResponse(response);
     } catch (e) {
-      console.error("API Request failed:", e);
-      // Re-throw so UI can handle it
+      console.error("API Call Failed:", e);
       throw e; 
     }
   },
@@ -89,7 +86,6 @@ export const api = {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      // We don't use handleResponse here strictly because if it's 401, we just want null
       if (res.ok) {
          return await res.json();
       }
