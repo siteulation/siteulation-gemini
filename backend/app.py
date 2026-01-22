@@ -11,7 +11,8 @@ from google.genai import types
 API_KEY = os.environ.get("APIKEY")
 SUPABASE_URL = os.environ.get("DATABASE_URL")
 # The secret key for backend operations (admin/service role)
-DATABASE_KEY = os.environ.get("DATABASE_KEY")
+# WARNING: Do not expose this to the frontend
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY")
 # The anon public key for frontend operations. REQUIRED for frontend to work.
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 
@@ -27,8 +28,8 @@ ai_client = genai.Client(api_key=API_KEY)
 
 def get_supabase_headers():
     return {
-        "apikey": DATABASE_KEY,
-        "Authorization": f"Bearer {DATABASE_KEY}",
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
         "Content-Type": "application/json",
         "Prefer": "return=representation"
     }
@@ -41,12 +42,15 @@ def index():
             content = f.read()
             
         # Inject environment variables for Frontend
-        # We ONLY inject the ANON key. If it's missing, frontend will know.
+        # We ONLY inject the ANON key. If it's missing, frontend will have empty string.
+        # This prevents the "Forbidden use of secret key" error in browser.
+        frontend_key = SUPABASE_ANON_KEY if SUPABASE_ANON_KEY else ""
+        
         env_script = f"""
         <script>
           window.env = {{
             SUPABASE_URL: "{SUPABASE_URL}",
-            SUPABASE_KEY: "{SUPABASE_ANON_KEY if SUPABASE_ANON_KEY else ''}"
+            SUPABASE_KEY: "{frontend_key}"
           }};
         </script>
         """
@@ -118,7 +122,7 @@ def generate_cart():
             "code": generated_code
         }
         
-        # Backend uses the secure DATABASE_KEY
+        # Backend uses the secure SERVICE ROLE KEY
         db_response = requests.post(url, json=payload, headers=get_supabase_headers())
         
         if db_response.status_code not in [200, 201]:
@@ -139,7 +143,7 @@ def generate_cart():
 def get_recent_carts():
     try:
         url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order=created_at.desc&limit=20"
-        # Backend uses the secure DATABASE_KEY
+        # Backend uses the secure SERVICE ROLE KEY
         response = requests.get(url, headers=get_supabase_headers())
         
         if response.status_code != 200:
