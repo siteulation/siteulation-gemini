@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ModelType } from '../types.js';
-import { Sparkles, AlertTriangle, Zap, Cpu, GitFork } from 'lucide-react';
+import { Sparkles, AlertTriangle, Zap, Cpu, GitFork, Users, Globe } from 'lucide-react';
 import { html } from '../utils.js';
 
 const CreateSite = () => {
   const [prompt, setPrompt] = useState('');
   const [name, setName] = useState('');
   const [model, setModel] = useState(ModelType.GEMINI_3);
+  const [isMultiplayer, setIsMultiplayer] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -47,6 +48,7 @@ const CreateSite = () => {
         prompt,
         name,
         model,
+        multiplayer: isMultiplayer,
         remix_code: remixData ? remixData.code : null
       };
 
@@ -127,6 +129,23 @@ const CreateSite = () => {
                   <div className="absolute bottom-4 right-4 text-xs text-slate-600 font-mono">
                     ${prompt.length} CHARS
                   </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3 p-4 bg-slate-800/50 rounded-xl border border-white/5">
+                <button
+                    type="button"
+                    onClick=${() => setIsMultiplayer(!isMultiplayer)}
+                    className=${`w-12 h-6 rounded-full transition-colors relative ${isMultiplayer ? 'bg-primary-500' : 'bg-slate-700'}`}
+                >
+                    <div className=${`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${isMultiplayer ? 'left-7' : 'left-1'}`}></div>
+                </button>
+                <div>
+                    <div className="flex items-center space-x-2">
+                        <${Users} size=${16} className=${isMultiplayer ? 'text-primary-400' : 'text-slate-500'} />
+                        <span className="font-bold text-sm text-white">Enable Real-Time Multiplayer</span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">Allow users to interact via shared sockets.</p>
                 </div>
               </div>
 

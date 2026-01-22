@@ -4,6 +4,7 @@ import mimetypes
 import traceback
 from flask import Flask, request, jsonify, send_from_directory, send_file, Response
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from werkzeug.exceptions import HTTPException
 from google import genai
 from google.genai import types
@@ -27,6 +28,10 @@ ADMIN_USERNAME = "homelessman"
 # static_folder points to the frontend directory
 app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='/frontend')
 CORS(app)
+
+# --- SocketIO Setup ---
+# Allow all origins for the generated iframe scripts to connect
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 mimetypes.add_type('application/javascript', '.js')
 
@@ -120,6 +125,41 @@ def serve_html_with_meta(title=None, description=None):
     html_content = html_content.replace(f'<title>{default_title}</title>', f'<title>{target_title}</title>')
     
     return html_content
+
+# --- SocketIO Events ---
+
+@socketio.on('join')
+def on_join(data):
+    """
+    Client emits 'join' with { 'room': 'cart_id_or_unique_id' }
+    """
+    room = data.get('room')
+    if not room:
+        return
+    join_room(room)
+    # Notify others in room
+    emit('player_joined', {'sid': request.sid}, room=room, include_self=False)
+
+@socketio.on('leave')
+def on_leave(data):
+    room = data.get('room')
+    if not room:
+        return
+    leave_room(room)
+    emit('player_left', {'sid': request.sid}, room=room)
+
+@socketio.on('state_update')
+def on_state_update(data):
+    """
+    Generic state relay. 
+    Client emits 'state_update' with { 'room': '...', 'data': ... }
+    Server broadcasts 'state_update' to everyone else in the room.
+    """
+    room = data.get('room')
+    payload = data.get('data')
+    if room and payload is not None:
+        # Broadcast to everyone else in the room
+        emit('state_update', payload, room=room, include_self=False)
 
 # --- Global Error Handlers ---
 
@@ -372,6 +412,7 @@ def generate_cart():
     name = data.get('name') or prompt # Default name to prompt if not set
     model_choice = data.get('model', 'gemini-3') # Default to Gemini 3
     remix_code = data.get('remix_code') # The code from the original cart if remixing
+    multiplayer_enabled = data.get('multiplayer', False)
     
     if not prompt:
         return jsonify({"error": "Prompt required"}), 400
@@ -392,11 +433,28 @@ EXISTING CODE:
 
 USER REQUEST:
 {prompt}
-
-Generate the updated single-file HTML app.
 """
     else:
         final_prompt = prompt
+
+    # Inject Multiplayer Instructions if enabled
+    if multiplayer_enabled:
+        multiplayer_prompt = """
+        
+*** IMPORTANT: MULTIPLAYER MODE ENABLED ***
+You MUST implement real-time multiplayer functionality.
+1. Include the Socket.IO client library: <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+2. Initialize the connection: `const socket = io({transports: ['websocket', 'polling']});`
+3. Generate a unique 'Room ID' (or ask the user to enter one) to separate different sessions.
+4. On startup, emit: `socket.emit('join', { room: myRoomId });`
+5. To sync data, emit: `socket.emit('state_update', { room: myRoomId, data: { ...yourStateObject... } });`
+6. Listen for updates: `socket.on('state_update', (data) => { ...updateLocalState(data)... });`
+7. Listen for players: `socket.on('player_joined', ...)`, `socket.on('player_left', ...)`
+8. Ensure you debounce rapid updates to avoid flooding.
+"""
+        final_prompt += multiplayer_prompt
+        
+    final_prompt += "\nGenerate the updated single-file HTML app."
 
     system_instruction = (
         "You are Siteulation AI. Generate a SINGLE-FILE HTML app. "
@@ -507,4 +565,5 @@ def serve_spa(path):
     return serve_html_with_meta()
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    # Use socketio.run instead of app.run
+    socketio.run(app, port=5000, debug=True)
