@@ -2,7 +2,7 @@ import os
 import requests
 import mimetypes
 import traceback
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file, Response
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 from google import genai
@@ -451,7 +451,11 @@ def serve_logo():
     
     # STRICT MODE: No fallback allowed
     if os.path.exists(logo_path):
-        return send_file(logo_path, mimetype='image/png')
+        # Manually read binary data
+        with open(logo_path, 'rb') as f:
+            image_binary = f.read()
+        
+        return Response(image_binary, mimetype='image/png')
     
     print(f"ERROR: Logo file not found at {logo_path}")
     return "Logo not found", 404
