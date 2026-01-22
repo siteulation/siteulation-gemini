@@ -1,5 +1,4 @@
 import os
-import json
 import requests
 import mimetypes
 from flask import Flask, request, jsonify
@@ -10,27 +9,21 @@ from google.genai import types
 # Load environment variables
 API_KEY = os.environ.get("APIKEY")
 SUPABASE_URL = os.environ.get("DATABASE_URL")
-
-# --- SECURITY CRITICAL ---
-# The Service Role Key is for the BACKEND ONLY. It has admin privileges.
-# NEVER inject this into index.html.
-SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY")
-
-# The Anon Key is for the FRONTEND. It is safe for the browser.
-# You must add this variable to your environment.
-SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY") # For DB Access (Admin)
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY") # For Auth Handshake
 
 app = Flask(__name__, static_folder='../frontend', static_url_path='/frontend')
 CORS(app)
 
-# Ensure .js files are served with the correct MIME type
 mimetypes.add_type('application/javascript', '.js')
 
 # Initialize Gemini Client
 ai_client = genai.Client(api_key=API_KEY)
 
-def get_backend_headers():
-    """Headers for backend-to-database requests using the Secret Key."""
+# --- Helpers ---
+
+def get_db_headers():
+    """Headers for DB operations (Service Role - Bypass RLS)"""
     return {
         "apikey": SUPABASE_SERVICE_ROLE_KEY,
         "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
@@ -38,26 +31,41 @@ def get_backend_headers():
         "Prefer": "return=representation"
     }
 
+def get_auth_headers():
+    """Headers for Auth Handshake (Anon Key)"""
+    return {
+        "apikey": SUPABASE_ANON_KEY,
+        "Content-Type": "application/json"
+    }
+
+def verify_token(request):
+    """Verify the Bearer token sent from Frontend against Supabase"""
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        return None
+    
+    token = auth_header.split(" ")[1] if " " in auth_header else auth_header
+    
+    # Verify via Supabase Auth API
+    url = f"{SUPABASE_URL}/auth/v1/user"
+    headers = {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": f"Bearer {token}"
+    }
+    
+    response = requests.get(url, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    return None
+
+# --- Routes ---
+
 @app.route('/')
 def index():
     try:
         with open('index.html', 'r') as f:
             content = f.read()
-            
-        # Inject ONLY the Public Anon Key into the browser
-        # If SUPABASE_ANON_KEY is missing, we send an empty string to avoid
-        # accidentally sending the secret key.
-        frontend_key = SUPABASE_ANON_KEY if SUPABASE_ANON_KEY else ""
-        
-        env_script = f"""
-        <script>
-          window.env = {{
-            SUPABASE_URL: "{SUPABASE_URL}",
-            SUPABASE_KEY: "{frontend_key}"
-          }};
-        </script>
-        """
-        content = content.replace('</head>', f'{env_script}</head>')
+        # Remove any previous injection logic, we don't need it.
         return content
     except FileNotFoundError:
         return "index.html not found", 404
@@ -66,16 +74,79 @@ def index():
 def health_check():
     return jsonify({"status": "ok"}), 200
 
+# --- Auth Routes ---
+
+@app.route('/api/auth/signup', methods=['POST'])
+def auth_signup():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    username = data.get('username')
+    
+    url = f"{SUPABASE_URL}/auth/v1/signup"
+    payload = {
+        "email": email,
+        "password": password,
+        "data": {"username": username}
+    }
+    
+    response = requests.post(url, json=payload, headers=get_auth_headers())
+    return jsonify(response.json()), response.status_code
+
+@app.route('/api/auth/signin', methods=['POST'])
+def auth_signin():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    
+    url = f"{SUPABASE_URL}/auth/v1/token?grant_type=password"
+    payload = {"email": email, "password": password}
+    
+    response = requests.post(url, json=payload, headers=get_auth_headers())
+    return jsonify(response.json()), response.status_code
+
+@app.route('/api/auth/user', methods=['GET'])
+def auth_user():
+    user = verify_token(request)
+    if user:
+        return jsonify(user), 200
+    return jsonify({"error": "Invalid token"}), 401
+
+# --- Data Routes ---
+
+@app.route('/api/carts', methods=['GET'])
+def get_carts():
+    # Public route, return recent carts
+    url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order=created_at.desc&limit=20"
+    response = requests.get(url, headers=get_db_headers())
+    return jsonify(response.json()), response.status_code
+
+@app.route('/api/carts/<id>', methods=['GET'])
+def get_cart_by_id(id):
+    url = f"{SUPABASE_URL}/rest/v1/carts?select=*&id=eq.{id}"
+    response = requests.get(url, headers=get_db_headers())
+    data = response.json()
+    if not data:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify(data[0]), 200
+
 @app.route('/api/generate', methods=['POST'])
 def generate_cart():
+    # Verify User
+    user = verify_token(request)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+
     data = request.json
     prompt = data.get('prompt')
     model_choice = data.get('model')
-    user_id = data.get('userId')
-    username = data.get('username')
+    
+    # Use user data from the verified token
+    user_id = user['id']
+    username = user.get('user_metadata', {}).get('username', 'Anonymous')
 
-    if not all([prompt, model_choice, user_id]):
-        return jsonify({"error": "Missing required fields"}), 400
+    if not prompt:
+        return jsonify({"error": "Prompt is required"}), 400
 
     model_map = {
         "gemini-2.5": "gemini-2.5-flash",
@@ -100,11 +171,10 @@ def generate_cart():
         )
         
         generated_code = response.text
-        # Clean markdown if present
         if generated_code.startswith("```"):
             generated_code = generated_code.replace("```html", "").replace("```", "")
 
-        # Save to Supabase using the Backend Secret Key
+        # Save to DB
         url = f"{SUPABASE_URL}/rest/v1/carts"
         payload = {
             "user_id": user_id,
@@ -114,7 +184,7 @@ def generate_cart():
             "code": generated_code
         }
         
-        db_response = requests.post(url, json=payload, headers=get_backend_headers())
+        db_response = requests.post(url, json=payload, headers=get_db_headers())
         
         if db_response.status_code not in [200, 201]:
             raise Exception(f"Database error: {db_response.text}")
@@ -123,15 +193,6 @@ def generate_cart():
 
     except Exception as e:
         print(f"Error: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/api/carts', methods=['GET'])
-def get_recent_carts():
-    try:
-        url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order=created_at.desc&limit=20"
-        response = requests.get(url, headers=get_backend_headers())
-        return jsonify(response.json()), response.status_code
-    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':

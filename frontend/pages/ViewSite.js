@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase } from '../services/supabase.js';
+import { api } from '../services/api.js';
 import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code } from 'lucide-react';
 import { html } from '../utils.js';
 
@@ -14,14 +14,13 @@ const ViewSite = () => {
     const fetchCart = async () => {
       if (!id) return;
       try {
-        const { data, error } = await supabase
-          .from('carts')
-          .select('*')
-          .eq('id', id)
-          .single();
-        
-        if (error) throw error;
-        setCart(data);
+        const response = await api.request(`/api/carts/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          setCart(data);
+        } else {
+          console.error("Cart not found");
+        }
       } catch (error) {
         console.error("Error fetching site:", error);
       } finally {

@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../services/supabase.js';
+import React, { useState } from 'react';
+import { api } from '../services/api.js';
 import { useNavigate } from 'react-router-dom';
-import { BACKEND_URL } from '../constants.js';
 import { ModelType } from '../types.js';
 import { Sparkles, AlertTriangle, Zap, Cpu } from 'lucide-react';
 import { html } from '../utils.js';
@@ -13,35 +12,19 @@ const CreateSite = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate('/auth');
-      }
-    };
-    checkUser();
-  }, [navigate]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Auth Token Expired");
-
       const payload = {
         prompt,
-        model,
-        userId: user.id,
-        username: user.user_metadata.username || user.email?.split('@')[0] || 'Operator'
+        model
       };
 
-      const response = await fetch(`${BACKEND_URL}/api/generate`, {
+      const response = await api.request('/api/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 

@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import { supabase } from '../services/supabase.js';
+import { api } from '../services/api.js';
 import { useNavigate } from 'react-router-dom';
 import { html } from '../utils.js';
 import { Box, Lock, User, Mail, ArrowRight, Loader2 } from 'lucide-react';
 
-const Auth = () => {
-  const [view, setView] = useState('signin'); // 'signin' or 'signup'
+const Auth = ({ setUser }) => {
+  const [view, setView] = useState('signin');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-  // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -23,38 +22,25 @@ const Auth = () => {
 
     try {
       if (view === 'signup') {
-        // Sign Up Flow
-        const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              username: username,
-            },
-          },
-        });
-
-        if (signUpError) throw signUpError;
-
-        // If auto-confirm is on, session will exist. Otherwise, tell user to check email.
+        const data = await api.auth.signUp(email, password, username);
+        
+        // If Supabase returns a session immediately (auto confirm)
         if (data.session) {
-          navigate('/');
+            api.setToken(data.access_token);
+            setUser(data.user);
+            navigate('/');
         } else {
-          // If Supabase requires email verification, we inform the user.
-          // However, if "Enable Email Confirmations" is OFF in Supabase, this block won't hit.
-          setError('Account created! Please sign in.');
-          setView('signin');
+            setError('Account created! Please check your email to verify before signing in.');
+            setView('signin');
         }
 
       } else {
-        // Sign In Flow
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (signInError) throw signInError;
-        navigate('/');
+        const data = await api.auth.signIn(email, password);
+        if (data.access_token) {
+            api.setToken(data.access_token);
+            setUser(data.user);
+            navigate('/');
+        }
       }
     } catch (err) {
       console.error(err);
@@ -72,14 +58,12 @@ const Auth = () => {
 
   return html`
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950 relative">
-      <!-- Background Effects -->
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-[128px]"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[128px]"></div>
       </div>
 
       <div className="w-full max-w-sm relative z-10">
-        <!-- Header -->
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/10 mb-4">
             <${Box} className="text-white" size=${24} />
@@ -92,9 +76,7 @@ const Auth = () => {
           </p>
         </div>
 
-        <!-- Auth Card -->
         <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl">
-          
           ${error && html`
             <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-200 text-xs rounded-lg text-center font-mono">
               ${error}
@@ -102,7 +84,6 @@ const Auth = () => {
           `}
 
           <form onSubmit=${handleAuth} className="space-y-4">
-            
             ${view === 'signup' && html`
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Username</label>

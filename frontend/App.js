@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { supabase } from './services/supabase.js';
+import { api } from './services/api.js';
 import Navbar from './components/Navbar.js';
 import Home from './pages/Home.js';
 import Auth from './pages/Auth.js';
@@ -13,18 +13,19 @@ const App = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const initAuth = async () => {
+      try {
+        const userData = await api.auth.getUser();
+        setUser(userData);
+      } catch (e) {
+        console.error("Auth check failed", e);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
+    initAuth();
   }, []);
 
   if (loading) {
@@ -34,20 +35,19 @@ const App = () => {
   return html`
     <${Router}>
       <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans selection:bg-primary-500 selection:text-white">
-        <${Navbar} user=${user} />
+        <${Navbar} user=${user} setUser=${setUser} />
         <main className="flex-1">
           <${Routes}>
             <${Route} path="/" element=${html`<${Home} />`} />
             <${Route} 
               path="/auth" 
-              element=${!user ? html`<${Auth} />` : html`<${Navigate} to="/" replace />`} 
+              element=${!user ? html`<${Auth} setUser=${setUser} />` : html`<${Navigate} to="/" replace />`} 
             />
             <${Route} 
               path="/create" 
               element=${user ? html`<${CreateSite} />` : html`<${Navigate} to="/auth" replace />`} 
             />
             <${Route} path="/site/:id" element=${html`<${ViewSite} />`} />
-            <!-- Redirect old cart routes for compatibility -->
             <${Route} path="/cart/:id" element=${html`<${Navigate} to="/site/:id" replace />`} />
           <//>
         </main>

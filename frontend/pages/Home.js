@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BACKEND_URL } from '../constants.js';
+import { api } from '../services/api.js';
 import { SiteCard } from '../components/SiteCard.js';
 import { Loader2, Sparkles, Command } from 'lucide-react';
 import { html } from '../utils.js';
@@ -12,7 +12,7 @@ const Home = () => {
   useEffect(() => {
     const fetchCarts = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/carts`);
+        const response = await api.request('/api/carts');
         if (response.ok) {
           const data = await response.json();
           // Ensure data is an array before setting state

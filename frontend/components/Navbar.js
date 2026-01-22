@@ -1,14 +1,15 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../services/supabase.js';
-import { LogOut, Plus, Box, User, Zap } from 'lucide-react';
+import { api } from '../services/api.js';
+import { LogOut, Plus, Box, User } from 'lucide-react';
 import { html } from '../utils.js';
 
-const Navbar = ({ user }) => {
+const Navbar = ({ user, setUser }) => {
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  const handleLogout = () => {
+    api.auth.signOut();
+    setUser(null);
     navigate('/auth');
   };
 
@@ -40,7 +41,7 @@ const Navbar = ({ user }) => {
               <div className="flex items-center space-x-3">
                 <div className="flex flex-col items-end hidden md:flex">
                   <span className="text-sm font-medium text-slate-200">
-                    ${user.user_metadata.username || user.email?.split('@')[0]}
+                    ${user.user_metadata?.username || user.email?.split('@')[0] || 'User'}
                   </span>
                 </div>
                 <button
