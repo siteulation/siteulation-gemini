@@ -2,21 +2,23 @@ import { createClient } from '@supabase/supabase-js';
 
 const env = window.env || {};
 
-const supabaseUrl = env.SUPABASE_URL;
-const supabaseKey = env.SUPABASE_KEY; // This should be the ANON key, not the SECRET key
+// Validate keys to ensure we aren't using undefined or empty strings silently
+const isValidKey = (key) => typeof key === 'string' && key.length > 0;
 
-if (!supabaseUrl) {
-  console.error("Siteulation: SUPABASE_URL is not set.");
+if (!isValidKey(env.SUPABASE_URL)) {
+  console.error("CRITICAL: SUPABASE_URL is missing from environment.");
 }
 
-if (!supabaseKey) {
-  console.error("Siteulation: SUPABASE_KEY is missing. Ensure SUPABASE_ANON_KEY is set in environment variables.");
+if (!isValidKey(env.SUPABASE_KEY)) {
+  console.error("CRITICAL: SUPABASE_KEY is missing. Check SUPABASE_ANON_KEY in backend env vars.");
 }
 
-// Initialize Supabase
-// We use fallback values to prevent the app from white-screening immediately,
-// but auth calls will fail if credentials are invalid.
+// Check for common configuration error where Secret key is used
+if (env.SUPABASE_KEY && env.SUPABASE_KEY.startsWith('ey') && env.SUPABASE_KEY.includes('service_role')) {
+   console.error("SECURITY ALERT: It appears a SERVICE_ROLE key is being used in the browser. This is forbidden. Please use the ANON key.");
+}
+
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseKey || 'placeholder'
+  env.SUPABASE_URL || 'https://placeholder.supabase.co',
+  env.SUPABASE_KEY || 'placeholder'
 );

@@ -2,7 +2,7 @@ import os
 import json
 import requests
 import mimetypes
-from flask import Flask, request, jsonify, send_from_directory, make_response
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from google import genai
 from google.genai import types
@@ -11,15 +11,15 @@ from google.genai import types
 API_KEY = os.environ.get("APIKEY")
 SUPABASE_URL = os.environ.get("DATABASE_URL")
 
-# SECURITY CRITICAL: 
-# DATABASE_KEY is the Service Role (Secret) key. NEVER send this to the frontend.
+# --- SECURITY CRITICAL ---
+# The Service Role Key is for the BACKEND ONLY. It has admin privileges.
+# NEVER inject this into index.html.
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY")
 
-# SUPABASE_ANON_KEY is the Public (Anon) key. This IS safe for the frontend.
-# You must set this env var in your deployment.
+# The Anon Key is for the FRONTEND. It is safe for the browser.
+# You must add this variable to your environment.
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 
-# Configure Flask to serve static files from the 'frontend' directory
 app = Flask(__name__, static_folder='../frontend', static_url_path='/frontend')
 CORS(app)
 
@@ -29,8 +29,8 @@ mimetypes.add_type('application/javascript', '.js')
 # Initialize Gemini Client
 ai_client = genai.Client(api_key=API_KEY)
 
-def get_supabase_headers():
-    """Headers for backend requests using the Secret Key"""
+def get_backend_headers():
+    """Headers for backend-to-database requests using the Secret Key."""
     return {
         "apikey": SUPABASE_SERVICE_ROLE_KEY,
         "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
@@ -40,14 +40,13 @@ def get_supabase_headers():
 
 @app.route('/')
 def index():
-    # Read index.html from the parent directory
     try:
         with open('index.html', 'r') as f:
             content = f.read()
             
-        # Inject environment variables for Frontend
-        # WE ONLY INJECT THE ANON KEY. 
-        # If SUPABASE_ANON_KEY is missing, we send an empty string (app will warn but not crash with security error).
+        # Inject ONLY the Public Anon Key into the browser
+        # If SUPABASE_ANON_KEY is missing, we send an empty string to avoid
+        # accidentally sending the secret key.
         frontend_key = SUPABASE_ANON_KEY if SUPABASE_ANON_KEY else ""
         
         env_script = f"""
@@ -58,16 +57,14 @@ def index():
           }};
         </script>
         """
-        # Inject before </head>
         content = content.replace('</head>', f'{env_script}</head>')
-        
         return content
     except FileNotFoundError:
         return "index.html not found", 404
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({"status": "ok", "service": "Siteulation Backend"}), 200
+    return jsonify({"status": "ok"}), 200
 
 @app.route('/api/generate', methods=['POST'])
 def generate_cart():
@@ -84,16 +81,12 @@ def generate_cart():
         "gemini-2.5": "gemini-2.5-flash",
         "gemini-3": "gemini-3-flash-preview"
     }
-    
     selected_model = model_map.get(model_choice, "gemini-2.5-flash")
 
     system_instruction = (
-        "You are 'Siteulation AI', an advanced web architect. Your task is to generate a SINGLE-FILE "
-        "HTML application based on the user's simulation parameters (prompt). "
-        "The file must include valid HTML5, CSS (in <style> tags), and JavaScript (in <script> tags). "
-        "The application must be fully functional within this single file. "
-        "Do not include markdown formatting (like ```html). Return ONLY the raw code."
-        "Make the design futuristic, clean, and highly responsive."
+        "You are 'Siteulation AI'. Generate a SINGLE-FILE HTML application based on the user's prompt. "
+        "Include CSS in <style> and JS in <script>. "
+        "Do NOT use markdown. Return raw HTML only."
     )
 
     try:
@@ -107,16 +100,11 @@ def generate_cart():
         )
         
         generated_code = response.text
-
-        # Clean up markdown
+        # Clean markdown if present
         if generated_code.startswith("```"):
-            lines = generated_code.splitlines()
-            if lines[0].strip().startswith("```"):
-                lines = lines[1:]
-            if lines[-1].strip().startswith("```"):
-                lines = lines[:-1]
-            generated_code = "\n".join(lines)
+            generated_code = generated_code.replace("```html", "").replace("```", "")
 
+        # Save to Supabase using the Backend Secret Key
         url = f"{SUPABASE_URL}/rest/v1/carts"
         payload = {
             "user_id": user_id,
@@ -126,34 +114,23 @@ def generate_cart():
             "code": generated_code
         }
         
-        # Backend uses the secure SERVICE ROLE KEY
-        db_response = requests.post(url, json=payload, headers=get_supabase_headers())
+        db_response = requests.post(url, json=payload, headers=get_backend_headers())
         
         if db_response.status_code not in [200, 201]:
             raise Exception(f"Database error: {db_response.text}")
 
-        saved_cart = db_response.json()[0]
-
-        return jsonify({
-            "success": True, 
-            "cart": saved_cart
-        }), 201
+        return jsonify({"success": True, "cart": db_response.json()[0]}), 201
 
     except Exception as e:
-        print(f"Error generating site: {e}")
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/carts', methods=['GET'])
 def get_recent_carts():
     try:
         url = f"{SUPABASE_URL}/rest/v1/carts?select=*&order=created_at.desc&limit=20"
-        # Backend uses the secure SERVICE ROLE KEY
-        response = requests.get(url, headers=get_supabase_headers())
-        
-        if response.status_code != 200:
-            return jsonify({"error": "Failed to fetch sites"}), response.status_code
-
-        return jsonify(response.json()), 200
+        response = requests.get(url, headers=get_backend_headers())
+        return jsonify(response.json()), response.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

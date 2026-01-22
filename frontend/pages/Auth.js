@@ -2,32 +2,29 @@ import React, { useState } from 'react';
 import { supabase } from '../services/supabase.js';
 import { useNavigate } from 'react-router-dom';
 import { html } from '../utils.js';
-import { Box, ArrowRight } from 'lucide-react';
+import { Box, Lock, User, Mail, ArrowRight, Loader2 } from 'lucide-react';
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [view, setView] = useState('signin'); // 'signin' or 'signup'
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  // Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  
   const navigate = useNavigate();
 
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
+    setError('');
 
     try {
-      if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-        navigate('/');
-      } else {
-        const { error } = await supabase.auth.signUp({
+      if (view === 'signup') {
+        // Sign Up Flow
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -36,99 +33,150 @@ const Auth = () => {
             },
           },
         });
-        if (error) throw error;
-        // Automatically log in if email confirmation is disabled in Supabase,
-        // otherwise prompt user.
-        if (!error) {
-           navigate('/'); 
+
+        if (signUpError) throw signUpError;
+
+        // If auto-confirm is on, session will exist. Otherwise, tell user to check email.
+        if (data.session) {
+          navigate('/');
+        } else {
+          // If Supabase requires email verification, we inform the user.
+          // However, if "Enable Email Confirmations" is OFF in Supabase, this block won't hit.
+          setError('Account created! Please sign in.');
+          setView('signin');
         }
+
+      } else {
+        // Sign In Flow
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInError) throw signInError;
+        navigate('/');
       }
     } catch (err) {
-      setError(err.message);
+      console.error(err);
+      setError(err.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
   };
 
+  const toggleView = () => {
+    setView(view === 'signin' ? 'signup' : 'signin');
+    setError('');
+    setPassword('');
+  };
+
   return html`
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 relative overflow-hidden">
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-      
-      <div className="w-full max-w-md relative z-10">
-        <div className="mb-8 text-center">
-          <div className="inline-flex p-3 bg-white/5 rounded-2xl mb-4 border border-white/10">
-            <${Box} className="text-white" size=${32} />
+    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950 relative">
+      <!-- Background Effects -->
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-[128px]"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[128px]"></div>
+      </div>
+
+      <div className="w-full max-w-sm relative z-10">
+        <!-- Header -->
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/10 mb-4">
+            <${Box} className="text-white" size=${24} />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Siteulation</h1>
-          <p className="text-slate-400">Sign in to your account.</p>
+          <h1 className="text-2xl font-bold text-white tracking-tight">
+            ${view === 'signin' ? 'Welcome Back' : 'Create Account'}
+          </h1>
+          <p className="text-slate-400 text-sm mt-2">
+            ${view === 'signin' ? 'Enter credentials to access the terminal.' : 'Initialize your identity profile.'}
+          </p>
         </div>
 
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl">
+        <!-- Auth Card -->
+        <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl">
+          
           ${error && html`
-            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-200 rounded-lg text-sm text-center">
+            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-200 text-xs rounded-lg text-center font-mono">
               ${error}
             </div>
           `}
 
           <form onSubmit=${handleAuth} className="space-y-4">
-            ${!isLogin && html`
-              <div className="space-y-1">
-                <label className="text-xs font-mono text-slate-400 uppercase">Username</label>
-                <input
-                  type="text"
-                  value=${username}
-                  onChange=${(e) => setUsername(e.target.value)}
-                  required=${!isLogin}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
-                  placeholder="Username"
-                />
+            
+            ${view === 'signup' && html`
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Username</label>
+                <div className="relative group">
+                  <${User} className="absolute left-3 top-3 text-slate-500 group-focus-within:text-primary-400 transition-colors" size=${16} />
+                  <input
+                    type="text"
+                    value=${username}
+                    onChange=${(e) => setUsername(e.target.value)}
+                    required
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all placeholder:text-slate-600"
+                    placeholder="Operator Name"
+                  />
+                </div>
               </div>
             `}
-            
-            <div className="space-y-1">
-              <label className="text-xs font-mono text-slate-400 uppercase">Email</label>
-              <input
-                type="email"
-                value=${email}
-                onChange=${(e) => setEmail(e.target.value)}
-                required
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
-                placeholder="email@example.com"
-              />
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Email</label>
+              <div className="relative group">
+                <${Mail} className="absolute left-3 top-3 text-slate-500 group-focus-within:text-primary-400 transition-colors" size=${16} />
+                <input
+                  type="email"
+                  value=${email}
+                  onChange=${(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all placeholder:text-slate-600"
+                  placeholder="name@example.com"
+                />
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-mono text-slate-400 uppercase">Password</label>
-              <input
-                type="password"
-                value=${password}
-                onChange=${(e) => setPassword(e.target.value)}
-                required
-                minLength=${6}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
-                placeholder="••••••••"
-              />
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Password</label>
+              <div className="relative group">
+                <${Lock} className="absolute left-3 top-3 text-slate-500 group-focus-within:text-primary-400 transition-colors" size=${16} />
+                <input
+                  type="password"
+                  value=${password}
+                  onChange=${(e) => setPassword(e.target.value)}
+                  required
+                  minLength=${6}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all placeholder:text-slate-600"
+                  placeholder="••••••••"
+                />
+              </div>
             </div>
 
             <button
               type="submit"
               disabled=${loading}
-              className="w-full bg-white text-slate-950 font-bold py-3 rounded-lg hover:bg-slate-200 transition-all flex items-center justify-center space-x-2 mt-6"
+              className="w-full bg-white text-slate-950 font-bold py-3 rounded-lg hover:bg-slate-200 active:scale-[0.98] transition-all flex items-center justify-center space-x-2 mt-2"
             >
-              <span>${loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}</span>
-              ${!loading && html`<${ArrowRight} size=${16} />`}
+              ${loading ? html`
+                <${Loader2} className="animate-spin" size=${18} />
+                <span>Processing...</span>
+              ` : html`
+                <span>${view === 'signin' ? 'Sign In' : 'Sign Up'}</span>
+                <${ArrowRight} size=${16} />
+              `}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-slate-500">
-            ${isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
+          <div className="mt-6 pt-6 border-t border-white/5 text-center">
+            <p className="text-slate-500 text-sm">
+              ${view === 'signin' ? "Don't have an account?" : "Already have an account?"}
+            </p>
             <button
-              onClick=${() => setIsLogin(!isLogin)}
-              className="text-primary-400 hover:text-primary-300 font-medium underline decoration-primary-500/30 underline-offset-4"
+              onClick=${toggleView}
+              className="mt-2 text-primary-400 hover:text-white text-sm font-medium transition-colors hover:underline"
             >
-              ${isLogin ? 'Sign Up' : 'Sign In'}
+              ${view === 'signin' ? 'Create new account' : 'Sign in to existing account'}
             </button>
-          </p>
+          </div>
         </div>
       </div>
     </div>
