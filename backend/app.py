@@ -10,10 +10,13 @@ from google.genai import types
 # Load environment variables
 API_KEY = os.environ.get("APIKEY")
 SUPABASE_URL = os.environ.get("DATABASE_URL")
-# The secret key for backend operations (admin/service role)
-# WARNING: Do not expose this to the frontend
+
+# SECURITY CRITICAL: 
+# DATABASE_KEY is the Service Role (Secret) key. NEVER send this to the frontend.
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY")
-# The anon public key for frontend operations. REQUIRED for frontend to work.
+
+# SUPABASE_ANON_KEY is the Public (Anon) key. This IS safe for the frontend.
+# You must set this env var in your deployment.
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
 
 # Configure Flask to serve static files from the 'frontend' directory
@@ -27,6 +30,7 @@ mimetypes.add_type('application/javascript', '.js')
 ai_client = genai.Client(api_key=API_KEY)
 
 def get_supabase_headers():
+    """Headers for backend requests using the Secret Key"""
     return {
         "apikey": SUPABASE_SERVICE_ROLE_KEY,
         "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
@@ -42,8 +46,8 @@ def index():
             content = f.read()
             
         # Inject environment variables for Frontend
-        # We ONLY inject the ANON key. If it's missing, frontend will have empty string.
-        # This prevents the "Forbidden use of secret key" error in browser.
+        # WE ONLY INJECT THE ANON KEY. 
+        # If SUPABASE_ANON_KEY is missing, we send an empty string (app will warn but not crash with security error).
         frontend_key = SUPABASE_ANON_KEY if SUPABASE_ANON_KEY else ""
         
         env_script = f"""
