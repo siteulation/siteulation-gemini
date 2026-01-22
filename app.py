@@ -447,17 +447,19 @@ Generate the updated single-file HTML app.
 @app.route('/siteulationlogo.png')
 def serve_logo():
     # Force absolute path check
-    logo_path = os.path.join(BASE_DIR, 'siteulationlogo.png')
+    logo_filename = 'siteulationlogo.png'
     
-    # STRICT MODE: No fallback allowed
+    # Try ROOT first
+    logo_path = os.path.join(BASE_DIR, logo_filename)
     if os.path.exists(logo_path):
-        # Manually read binary data
-        with open(logo_path, 'rb') as f:
-            image_binary = f.read()
-        
-        return Response(image_binary, mimetype='image/png')
+        return send_file(logo_path, mimetype='image/png')
     
-    print(f"ERROR: Logo file not found at {logo_path}")
+    # Try FRONTEND_DIR
+    logo_path_frontend = os.path.join(FRONTEND_DIR, logo_filename)
+    if os.path.exists(logo_path_frontend):
+        return send_file(logo_path_frontend, mimetype='image/png')
+        
+    print(f"ERROR: Logo file not found at {logo_path} or {logo_path_frontend}")
     return "Logo not found", 404
 
 @app.route('/site/<id>', methods=['GET'])
