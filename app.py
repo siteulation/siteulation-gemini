@@ -1,7 +1,8 @@
 import os
 import json
 import requests
-from flask import Flask, request, jsonify
+import mimetypes
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from google import genai
 from google.genai import types
@@ -11,8 +12,13 @@ API_KEY = os.environ.get("APIKEY")
 SUPABASE_URL = os.environ.get("DATABASE_URL") # Supabase Project URL
 SUPABASE_KEY = os.environ.get("DATABASE_KEY") # Supabase Service Role Key
 
-app = Flask(__name__)
+# Configure Flask to serve static files from the 'frontend' directory
+app = Flask(__name__, static_folder='frontend', static_url_path='/frontend')
 CORS(app)
+
+# Ensure .tsx files are served with the correct MIME type so browsers (or bundlers) accept them
+mimetypes.add_type('application/javascript', '.tsx')
+mimetypes.add_type('application/javascript', '.ts')
 
 # Initialize Gemini Client
 ai_client = genai.Client(api_key=API_KEY)
@@ -24,6 +30,10 @@ def get_supabase_headers():
         "Content-Type": "application/json",
         "Prefer": "return=representation"
     }
+
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
 
 @app.route('/health', methods=['GET'])
 def health_check():
