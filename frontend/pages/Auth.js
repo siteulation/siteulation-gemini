@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { api } from '../services/api.js';
 import { useNavigate } from 'react-router-dom';
 import { html } from '../utils.js';
-import { Box, Lock, User, Mail, ArrowRight, Loader2 } from 'lucide-react';
+import { Lock, User, Mail, ArrowRight, Loader2 } from 'lucide-react';
 
 const Auth = ({ setUser }) => {
   const [view, setView] = useState('signin');
@@ -66,8 +66,12 @@ const Auth = ({ setUser }) => {
 
       <div className="w-full max-w-sm relative z-10">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 border border-white/10 mb-4">
-            <${Box} className="text-white" size=${24} />
+          <div className="inline-flex items-center justify-center mb-4">
+            <img 
+              src="/frontend/siteulationlogo.png" 
+              alt="Siteulation Logo" 
+              className="w-20 h-20 rounded-2xl shadow-2xl shadow-primary-500/30" 
+            />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">
             ${view === 'signin' ? 'Welcome Back' : 'Create Account'}

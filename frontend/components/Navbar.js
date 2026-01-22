@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { LogOut, Plus, Box, User } from 'lucide-react';
+import { LogOut, Plus, User } from 'lucide-react';
 import { html } from '../utils.js';
 
 const Navbar = ({ user, setUser }) => {
@@ -16,10 +16,12 @@ const Navbar = ({ user, setUser }) => {
   return html`
     <nav className="fixed top-0 z-50 w-full border-b border-white/5 bg-slate-950/80 backdrop-blur-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <${Link} to="/" className="flex items-center space-x-2 group">
-          <div className="p-2 bg-primary-500/10 rounded-lg border border-primary-500/20 group-hover:border-primary-500/50 transition-colors">
-            <${Box} className="text-primary-400" size=${24} />
-          </div>
+        <${Link} to="/" className="flex items-center space-x-3 group">
+          <img 
+            src="/frontend/siteulationlogo.png" 
+            alt="Siteulation Logo" 
+            className="w-8 h-8 rounded-lg shadow-lg shadow-primary-500/20 group-hover:scale-105 transition-transform" 
+          />
           <span className="text-xl font-bold tracking-tight text-white">
             Site<span className="text-primary-400">ulation</span>
           </span>
