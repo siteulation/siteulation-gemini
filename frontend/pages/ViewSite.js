@@ -43,7 +43,7 @@ const ViewSite = () => {
   if (!cart) {
     return html`
       <div className="h-screen flex flex-col items-center justify-center text-slate-400 bg-slate-950">
-        <p className="text-xl mb-4">Simulation data corrupted or missing.</p>
+        <p className="text-xl mb-4">Cart data corrupted or missing.</p>
         <${Link} to="/" className="text-primary-400 hover:underline">Return to Hub<//>
       </div>
     `;

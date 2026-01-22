@@ -18,10 +18,6 @@ const CreateSite = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         navigate('/auth');
-        return;
-      }
-      if (user.app_metadata.provider === 'email' && !user.email_confirmed_at) {
-        setError("Account verification required. Please check your email protocol.");
       }
     };
     checkUser();
@@ -35,10 +31,6 @@ const CreateSite = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Auth Token Expired");
-      
-      if (user.app_metadata.provider === 'email' && !user.email_confirmed_at) {
-        throw new Error("Email verification pending.");
-      }
 
       const payload = {
         prompt,
@@ -72,7 +64,7 @@ const CreateSite = () => {
     <div className="min-h-screen pt-24 pb-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="mb-10">
-          <h1 className="text-4xl font-bold text-white mb-2">Initialize Simulation</h1>
+          <h1 className="text-4xl font-bold text-white mb-2">Create Cart</h1>
           <p className="text-slate-400">Configure parameters for your new digital environment.</p>
         </div>
 
@@ -89,7 +81,7 @@ const CreateSite = () => {
             <form onSubmit=${handleSubmit} className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 backdrop-blur-sm">
               <div className="mb-8">
                 <label className="block text-sm font-mono text-slate-400 mb-3 uppercase tracking-wider">
-                  Prompt Protocol
+                  Prompt
                 </label>
                 <div className="relative">
                   <textarea
@@ -118,7 +110,7 @@ const CreateSite = () => {
                     <span>Compiling Assets...</span>
                   ` : html`
                     <${Sparkles} size=${20} />
-                    <span>Execute Generation</span>
+                    <span>Generate</span>
                   `}
                 </div>
               </button>

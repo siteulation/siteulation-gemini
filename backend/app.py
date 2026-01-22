@@ -12,13 +12,8 @@ API_KEY = os.environ.get("APIKEY")
 SUPABASE_URL = os.environ.get("DATABASE_URL")
 # The secret key for backend operations (admin/service role)
 DATABASE_KEY = os.environ.get("DATABASE_KEY")
-# The anon public key for frontend operations (optional, but recommended)
+# The anon public key for frontend operations. REQUIRED for frontend to work.
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
-
-# Determine which key to send to the frontend
-# We prefer the explicitly set ANON key. If not set, we fall back to DATABASE_KEY
-# (though if DATABASE_KEY is a secret key, the frontend client will throw an error).
-FRONTEND_SUPABASE_KEY = SUPABASE_ANON_KEY if SUPABASE_ANON_KEY else DATABASE_KEY
 
 # Configure Flask to serve static files from the 'frontend' directory
 app = Flask(__name__, static_folder='../frontend', static_url_path='/frontend')
@@ -46,11 +41,12 @@ def index():
             content = f.read()
             
         # Inject environment variables for Frontend
+        # We ONLY inject the ANON key. If it's missing, frontend will know.
         env_script = f"""
         <script>
           window.env = {{
             SUPABASE_URL: "{SUPABASE_URL}",
-            SUPABASE_KEY: "{FRONTEND_SUPABASE_KEY}"
+            SUPABASE_KEY: "{SUPABASE_ANON_KEY if SUPABASE_ANON_KEY else ''}"
           }};
         </script>
         """

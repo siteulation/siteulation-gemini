@@ -63,7 +63,7 @@ const Home = () => {
               className="inline-flex items-center space-x-2 bg-white text-slate-950 px-8 py-4 rounded-xl font-bold hover:bg-slate-200 transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.15)]"
             >
               <${Command} size=${20} />
-              <span>Initialize Simulation</span>
+              <span>Create Cart</span>
             <//>
           </div>
         </div>
@@ -74,7 +74,7 @@ const Home = () => {
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold text-white flex items-center space-x-2">
             <${Sparkles} className="text-primary-400" size=${24} />
-            <span>Recent Simulations</span>
+            <span>Recent Carts</span>
           </h2>
           <div className="text-sm text-slate-500 font-mono">LIVE FEED</div>
         </div>
@@ -85,8 +85,8 @@ const Home = () => {
           </div>
         ` : carts.length === 0 ? html`
           <div className="text-center py-20 bg-slate-900/30 rounded-2xl border border-white/5 border-dashed">
-            <p className="text-slate-400 text-lg">No simulations detected in the network.</p>
-            <${Link} to="/create" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">Start the first one<//>
+            <p className="text-slate-400 text-lg">No carts detected in the network.</p>
+            <${Link} to="/create" className="text-primary-400 hover:text-primary-300 mt-2 inline-block">Create the first one<//>
           </div>
         ` : html`
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
