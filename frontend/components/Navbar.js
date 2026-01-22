@@ -18,7 +18,7 @@ const Navbar = ({ user, setUser }) => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <${Link} to="/" className="flex items-center space-x-3 group">
           <img 
-            src="/siteulationlogo.png?v=2" 
+            src="/siteulationlogo.png?v=3" 
             alt="Siteulation Logo" 
             className="w-8 h-8 rounded-lg shadow-lg shadow-primary-500/20 group-hover:scale-105 transition-transform" 
           />

@@ -434,11 +434,13 @@ Generate the updated single-file HTML app.
 def serve_logo():
     # Force absolute path check
     logo_path = os.path.join(BASE_DIR, 'siteulationlogo.png')
+    
+    # STRICT MODE: No fallback allowed
     if os.path.exists(logo_path):
         return send_file(logo_path, mimetype='image/png')
-    else:
-        print(f"Logo not found at: {logo_path}")
-        return "Logo not found", 404
+    
+    print(f"ERROR: Logo file not found at {logo_path}")
+    return "Logo not found", 404
 
 @app.route('/site/<id>', methods=['GET'])
 def serve_site_preview(id):

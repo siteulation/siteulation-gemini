@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy } from 'lucide-react';
 import { html } from '../utils.js';
 
 const ViewSite = ({ user }) => {
@@ -15,6 +15,10 @@ const ViewSite = ({ user }) => {
   // Renaming State
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState('');
+  
+  // Code View State
+  const [showCode, setShowCode] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -88,6 +92,14 @@ const ViewSite = ({ user }) => {
       } catch (err) {
           alert("Failed to rename: " + err.message);
       }
+  };
+  
+  const handleCopyCode = () => {
+    if (cart && cart.code) {
+        navigator.clipboard.writeText(cart.code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   if (loading) {
@@ -207,7 +219,11 @@ const ViewSite = ({ user }) => {
                 </button>
              </div>
            `}
-           <button className="p-2 text-slate-400 hover:text-white transition-colors" title="View Source (Coming Soon)">
+           <button 
+                onClick=${() => setShowCode(true)}
+                className="p-2 text-slate-400 hover:text-white transition-colors" 
+                title="View Source"
+            >
              <${Code} size=${18} />
            </button>
         </div>
@@ -227,6 +243,39 @@ const ViewSite = ({ user }) => {
           />
         </div>
       </div>
+
+      <!-- Code Viewer Modal -->
+      ${showCode && html`
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-slate-800/50">
+              <div className="flex items-center space-x-2">
+                 <${Code} size=${16} className="text-primary-400"/>
+                 <h3 className="text-white font-bold font-mono text-sm">Source Code</h3>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button 
+                  onClick=${handleCopyCode}
+                  className="flex items-center space-x-2 px-3 py-1.5 bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 rounded-lg text-xs font-bold transition-colors"
+                >
+                  ${copied ? html`<${Check} size=${14} />` : html`<${Copy} size=${14} />`}
+                  <span>${copied ? 'Copied' : 'Copy'}</span>
+                </button>
+                <div className="w-px h-6 bg-white/10 mx-1"></div>
+                <button 
+                    onClick=${() => setShowCode(false)} 
+                    className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
+                >
+                  <${X} size=${20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-4 bg-slate-950/50">
+              <pre className="text-xs font-mono text-slate-300 whitespace-pre-wrap font-thin leading-relaxed selection:bg-primary-500/30">${cart.code}</pre>
+            </div>
+          </div>
+        </div>
+      `}
     </div>
   `;
 };
