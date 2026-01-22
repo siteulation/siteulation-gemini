@@ -38,7 +38,7 @@ const App = () => {
         <${Navbar} user=${user} setUser=${setUser} />
         <main className="flex-1">
           <${Routes}>
-            <${Route} path="/" element=${html`<${Home} />`} />
+            <${Route} path="/" element=${html`<${Home} user=${user} />`} />
             <${Route} 
               path="/auth" 
               element=${!user ? html`<${Auth} setUser=${setUser} />` : html`<${Navigate} to="/" replace />`} 
@@ -47,7 +47,7 @@ const App = () => {
               path="/create" 
               element=${user ? html`<${CreateSite} />` : html`<${Navigate} to="/auth" replace />`} 
             />
-            <${Route} path="/site/:id" element=${html`<${ViewSite} />`} />
+            <${Route} path="/site/:id" element=${html`<${ViewSite} user=${user} />`} />
             <${Route} path="/cart/:id" element=${html`<${Navigate} to="/site/:id" replace />`} />
           <//>
         </main>

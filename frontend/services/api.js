@@ -1,3 +1,4 @@
+
 import { BACKEND_URL } from '../constants.js';
 
 const TOKEN_KEY = 'siteulation_auth_token';
@@ -56,6 +57,18 @@ export const api = {
     } catch (e) {
       console.error("API Call Failed:", e);
       throw e; 
+    }
+  },
+
+  admin: {
+    deleteCart: async (id) => {
+        return api.request(`/api/carts/${id}`, { method: 'DELETE' });
+    },
+    banUser: async (userId) => {
+        return api.request(`/api/admin/ban`, { 
+            method: 'POST',
+            body: JSON.stringify({ user_id: userId })
+        });
     }
   },
 

@@ -6,7 +6,8 @@ create extension if not exists "uuid-ossp";
 create table public.profiles (
   id uuid references auth.users on delete cascade primary key,
   username text unique,
-  updated_at timestamp with time zone
+  updated_at timestamp with time zone,
+  is_banned boolean default false
 );
 
 -- Create a table for the 'Carts' (Projects)

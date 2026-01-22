@@ -21,6 +21,7 @@ API_KEY = os.environ.get("APIKEY")
 SUPABASE_URL = os.environ.get("DATABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY") # Secret Service Role Key
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY") # Public Anon Key
+ADMIN_USERNAME = "homelessman"
 
 # --- App Setup ---
 # static_folder points to the frontend directory
@@ -72,7 +73,23 @@ def verify_token(req):
     try:
         response = requests.get(url, headers=headers, timeout=5)
         if response.status_code == 200:
-            return response.json()
+            user = response.json()
+            # Enrich with profile status (banned)
+            user_id = user['id']
+            profile_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=is_banned"
+            prof_resp = requests.get(profile_url, headers=get_db_headers())
+            
+            is_banned = False
+            if prof_resp.status_code == 200 and prof_resp.json():
+                is_banned = prof_resp.json()[0].get('is_banned', False)
+            
+            user['is_banned'] = is_banned
+            
+            # Check Admin status
+            username = user.get('user_metadata', {}).get('username')
+            user['is_admin'] = (username == ADMIN_USERNAME)
+            
+            return user
     except Exception as e:
         print(f"Auth verification failed: {e}")
     
@@ -169,6 +186,34 @@ def auth_user():
         return jsonify(user), 200
     return jsonify({"error": "Invalid or expired token"}), 401
 
+# --- Admin Routes ---
+
+@app.route('/api/admin/ban', methods=['POST'])
+def admin_ban_user():
+    # Verify Admin
+    user = verify_token(request)
+    if not user or not user.get('is_admin'):
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    data = request.json or {}
+    target_user_id = data.get('user_id')
+    
+    if not target_user_id:
+        return jsonify({"error": "Target user ID required"}), 400
+    
+    if target_user_id == user['id']:
+        return jsonify({"error": "Cannot ban yourself"}), 400
+
+    # Update profile to banned
+    url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{target_user_id}"
+    payload = {"is_banned": True}
+    resp = requests.patch(url, json=payload, headers=get_db_headers())
+    
+    if resp.status_code >= 400:
+        return jsonify({"error": "Failed to ban user", "details": resp.text}), resp.status_code
+        
+    return jsonify({"success": True}), 200
+
 # --- Data Routes ---
 
 @app.route('/api/carts', methods=['GET'])
@@ -201,6 +246,25 @@ def get_cart_by_id(id):
         return jsonify({"error": "Cart not found"}), 404
     return jsonify(data[0]), 200
 
+@app.route('/api/carts/<id>', methods=['DELETE'])
+def delete_cart(id):
+    user = verify_token(request)
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    # Check if user is admin
+    if not user.get('is_admin'):
+        return jsonify({"error": "Only admins can delete carts"}), 403
+
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+    
+    url = f"{SUPABASE_URL}/rest/v1/carts?id=eq.{id}"
+    resp = requests.delete(url, headers=get_db_headers())
+    
+    if resp.status_code >= 400:
+        return jsonify({"error": "Delete failed", "details": resp.text}), resp.status_code
+        
+    return jsonify({"success": True}), 200
+
 @app.route('/api/carts/<id>/view', methods=['POST'])
 def increment_cart_view(id):
     if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
@@ -225,6 +289,10 @@ def generate_cart():
     user = verify_token(request)
     if not user:
         return jsonify({"error": "Unauthorized"}), 401
+    
+    # Check if banned
+    if user.get('is_banned'):
+         return jsonify({"error": "You have been banned from generating projects."}), 403
     
     if not ai_client:
         return jsonify({"error": "AI not initialized"}), 500

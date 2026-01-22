@@ -1,37 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api.js';
 import { SiteCard } from '../components/SiteCard.js';
-import { Loader2, Sparkles, Command, Flame, Clock } from 'lucide-react';
+import { Loader2, Sparkles, Command, Flame, Clock, MessageCircle } from 'lucide-react';
 import { html } from '../utils.js';
 import { Link } from 'react-router-dom';
 
-const Home = () => {
+const Home = ({ user }) => {
   const [carts, setCarts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('recent'); // 'recent' | 'popular'
 
-  useEffect(() => {
-    const fetchCarts = async () => {
-      setLoading(true);
-      try {
-        // api.request returns the parsed JSON data directly
-        // Pass sort parameter based on activeTab
-        const data = await api.request(`/api/carts?sort=${activeTab}`);
-        if (Array.isArray(data)) {
-          setCarts(data);
-        } else {
-          console.error("Expected array of carts, got:", data);
-          setCarts([]);
-        }
-      } catch (error) {
-        console.error("Error fetching sites:", error);
-      } finally {
-        setLoading(false);
+  const fetchCarts = async () => {
+    setLoading(true);
+    try {
+      const data = await api.request(`/api/carts?sort=${activeTab}`);
+      if (Array.isArray(data)) {
+        setCarts(data);
+      } else {
+        console.error("Expected array of carts, got:", data);
+        setCarts([]);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching sites:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchCarts();
-  }, [activeTab]); // Refetch when tab changes
+  }, [activeTab]);
 
   return html`
     <div className="min-h-screen pt-16">
@@ -58,13 +56,25 @@ const Home = () => {
               Siteulation leverages advanced Gemini AI to instantaneously compile single-file web applications from natural language protocols.
             </p>
 
-            <${Link} 
-              to="/create" 
-              className="inline-flex items-center space-x-2 bg-white text-slate-950 px-8 py-4 rounded-xl font-bold hover:bg-slate-200 transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.15)]"
-            >
-              <${Command} size=${20} />
-              <span>Create Cart</span>
-            <//>
+            <div className="flex items-center justify-center space-x-4">
+              <${Link} 
+                to="/create" 
+                className="inline-flex items-center space-x-2 bg-white text-slate-950 px-8 py-4 rounded-xl font-bold hover:bg-slate-200 transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.15)]"
+              >
+                <${Command} size=${20} />
+                <span>Create Cart</span>
+              <//>
+
+              <a 
+                href="https://discord.gg/X9AADBxNdM" 
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center space-x-2 bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-6 py-4 rounded-xl font-bold hover:bg-indigo-500/20 hover:text-white transition-all"
+              >
+                <${MessageCircle} size=${20} />
+                <span>Join Discord</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -107,7 +117,7 @@ const Home = () => {
           </div>
         ` : html`
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            ${carts.map((cart) => html`<${SiteCard} key=${cart.id} cart=${cart} />`)}
+            ${carts.map((cart) => html`<${SiteCard} key=${cart.id} cart=${cart} currentUser=${user} onDelete=${fetchCarts} />`)}
           </div>
         `}
       </div>
