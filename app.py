@@ -251,9 +251,13 @@ def get_carts():
     
     url = f"{SUPABASE_URL}/rest/v1/carts?select=*"
 
-    # Filter by user if requested
+    # Filter logic:
+    # If user_id is provided (viewing specific profile/my carts), show everything belonging to them.
+    # If NO user_id is provided (public feed), ONLY show listed carts.
     if filter_user_id:
         url += f"&user_id=eq.{filter_user_id}"
+    else:
+        url += "&is_listed=eq.true"
     
     # Determine sorting order
     if sort_mode == 'popular':
@@ -305,10 +309,16 @@ def update_cart(id):
     if not user: return jsonify({"error": "Unauthorized"}), 401
     
     data = request.json or {}
-    new_name = data.get('name')
     
-    if not new_name:
-        return jsonify({"error": "Name required"}), 400
+    # Construct Payload dynamically
+    payload = {}
+    if 'name' in data:
+        payload['name'] = data['name']
+    if 'is_listed' in data:
+        payload['is_listed'] = data['is_listed']
+        
+    if not payload:
+        return jsonify({"error": "No valid fields to update"}), 400
 
     if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
     
@@ -316,7 +326,6 @@ def update_cart(id):
     # But explicitly doing it here for the endpoint logic is safer/clearer
     
     url = f"{SUPABASE_URL}/rest/v1/carts?id=eq.{id}&user_id=eq.{user['id']}"
-    payload = {"name": new_name}
     
     resp = requests.patch(url, json=payload, headers=get_db_headers())
     
@@ -415,7 +424,8 @@ Generate the updated single-file HTML app.
             "prompt": prompt,
             "model": model_name,
             "code": code,
-            "views": 0
+            "views": 0,
+            "is_listed": False # Explicitly unlisted by default
         }
         db_resp = requests.post(url, json=payload, headers=get_db_headers())
         

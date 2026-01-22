@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Code2, Clock, UserCircle, Cpu, Eye, Trash2, ShieldCheck, Loader2 } from 'lucide-react';
+import { Code2, Clock, UserCircle, Cpu, Eye, Trash2, ShieldCheck, Loader2, Lock } from 'lucide-react';
 import { html } from '../utils.js';
 import { api } from '../services/api.js';
 
@@ -44,23 +44,32 @@ export const SiteCard = ({ cart, currentUser, onDelete }) => {
               </span>
             </div>
             
-            ${isAdminCreator && html`
-               <div className="flex items-center space-x-1 bg-red-500/20 border border-red-500/30 text-red-300 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase">
-                  <${ShieldCheck} size=${12} />
-                  <span>ADMIN</span>
-               </div>
-            `}
+            <div className="flex items-center space-x-1">
+                ${!cart.is_listed && html`
+                    <div className="flex items-center space-x-1 bg-slate-800 border border-slate-700 text-slate-400 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase" title="Only visible to you">
+                        <${Lock} size=${10} />
+                        <span>UNLISTED</span>
+                    </div>
+                `}
 
-            ${isAdminViewer && html`
-              <button 
-                onClick=${handleDelete} 
-                disabled=${deleting}
-                className="p-1.5 bg-red-900/50 text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors z-20"
-                title="Admin Delete"
-              >
-                ${deleting ? html`<${Loader2} size=${14} className="animate-spin" />` : html`<${Trash2} size=${14} />`}
-              </button>
-            `}
+                ${isAdminCreator && html`
+                <div className="flex items-center space-x-1 bg-red-500/20 border border-red-500/30 text-red-300 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase">
+                    <${ShieldCheck} size=${12} />
+                    <span>ADMIN</span>
+                </div>
+                `}
+
+                ${isAdminViewer && html`
+                <button 
+                    onClick=${handleDelete} 
+                    disabled=${deleting}
+                    className="p-1.5 bg-red-900/50 text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors z-20 ml-1"
+                    title="Admin Delete"
+                >
+                    ${deleting ? html`<${Loader2} size=${14} className="animate-spin" />` : html`<${Trash2} size=${14} />`}
+                </button>
+                `}
+            </div>
           </div>
           
           <h3 className="text-lg font-bold text-white mb-3 line-clamp-2 group-hover:text-primary-400 transition-colors leading-snug">

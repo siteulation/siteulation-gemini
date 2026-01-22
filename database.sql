@@ -20,6 +20,7 @@ create table public.carts (
   model text not null,
   code text not null,
   views integer default 0,
+  is_listed boolean default false, -- Controls public feed visibility
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -28,7 +29,7 @@ alter table public.profiles enable row level security;
 alter table public.carts enable row level security;
 
 -- Policies for Carts
--- Everyone can read carts
+-- Everyone can read carts (even unlisted ones if they have the ID, but api filters feed)
 create policy "Carts are public" on public.carts
   for select using (true);
 
@@ -36,7 +37,7 @@ create policy "Carts are public" on public.carts
 create policy "Users can insert own carts" on public.carts
   for insert with check (auth.uid() = user_id);
   
--- Allow users to update their own carts (e.g., for renaming)
+-- Allow users to update their own carts (e.g., for renaming or listing)
 create policy "Users can update own carts" on public.carts
   for update using (auth.uid() = user_id);
 

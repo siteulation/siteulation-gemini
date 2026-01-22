@@ -24,8 +24,16 @@ const CreateSite = () => {
             code: location.state.remixCode,
             originalName: location.state.originalName || 'Original'
         });
-        // Pre-fill name for convenience
-        setName(`Remix of ${location.state.originalName || 'Project'}`);
+        
+        // Naming Logic:
+        // If the original cart was LISTED (public), prepend "Remix of".
+        // If the original cart was UNLISTED (private), keep the name/prompt as is.
+        const originalName = location.state.originalName || 'Project';
+        if (location.state.isListed) {
+            setName(`Remix of ${originalName}`);
+        } else {
+            setName(originalName);
+        }
     }
   }, [location]);
 

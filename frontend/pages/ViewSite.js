@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy } from 'lucide-react';
+import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock } from 'lucide-react';
 import { html } from '../utils.js';
 
 const ViewSite = ({ user }) => {
@@ -75,7 +75,8 @@ const ViewSite = ({ user }) => {
       navigate('/create', { 
           state: { 
               remixCode: cart.code,
-              originalName: cart.name || cart.prompt
+              originalName: cart.name || cart.prompt,
+              isListed: cart.is_listed // Pass listing status to determine default name
           }
       });
   };
@@ -92,6 +93,19 @@ const ViewSite = ({ user }) => {
       } catch (err) {
           alert("Failed to rename: " + err.message);
       }
+  };
+  
+  const toggleListed = async () => {
+    try {
+        const newStatus = !cart.is_listed;
+        await api.request(`/api/carts/${cart.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ is_listed: newStatus })
+        });
+        setCart({ ...cart, is_listed: newStatus });
+    } catch (err) {
+        alert("Failed to update status: " + err.message);
+    }
   };
   
   const handleCopyCode = () => {
@@ -160,6 +174,9 @@ const ViewSite = ({ user }) => {
                         <${Pencil} size=${12} />
                     </button>
                 `}
+                ${!cart.is_listed && html`
+                    <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded ml-2 shrink-0 border border-slate-700">UNLISTED</span>
+                `}
                 ${cart.username === 'homelessman' && html`
                   <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider ml-1 shrink-0">ADMIN CREATION</span>
                 `}
@@ -198,6 +215,17 @@ const ViewSite = ({ user }) => {
                 <span>Remix</span>
              </button>
            `}
+
+            ${isOwner && html`
+                <button
+                    onClick=${toggleListed}
+                    className=${`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${cart.is_listed ? 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
+                    title=${cart.is_listed ? "Listed on public feed" : "Hidden from public feed"}
+                >
+                    ${cart.is_listed ? html`<${Globe} size=${14} />` : html`<${Lock} size=${14} />`}
+                    <span>${cart.is_listed ? 'Listed' : 'Release'}</span>
+                </button>
+            `}
 
            ${user?.is_admin && html`
              <div className="flex items-center space-x-1 mx-2 border-r border-l border-white/10 px-2">
