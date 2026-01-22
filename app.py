@@ -2,7 +2,7 @@ import os
 import requests
 import mimetypes
 import traceback
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException
 from google import genai
@@ -432,7 +432,13 @@ Generate the updated single-file HTML app.
 
 @app.route('/siteulationlogo.png')
 def serve_logo():
-    return send_from_directory(BASE_DIR, 'siteulationlogo.png')
+    # Force absolute path check
+    logo_path = os.path.join(BASE_DIR, 'siteulationlogo.png')
+    if os.path.exists(logo_path):
+        return send_file(logo_path, mimetype='image/png')
+    else:
+        print(f"Logo not found at: {logo_path}")
+        return "Logo not found", 404
 
 @app.route('/site/<id>', methods=['GET'])
 def serve_site_preview(id):
