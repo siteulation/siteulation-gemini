@@ -400,6 +400,10 @@ Generate the updated single-file HTML app.
                 temperature=0.7
             )
         )
+
+        if not response.text:
+            raise Exception("AI returned empty response (possibly blocked by safety filters)")
+
         code = response.text.replace("```html", "").replace("```", "")
         
         # Save to DB
