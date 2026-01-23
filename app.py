@@ -146,16 +146,17 @@ def generate_with_openrouter(prompt, model="google/gemini-2.0-flash-001"):
         "X-Title": "Siteulation"
     }
     
+    # NOTE: response_format is NOT supported for Gemini models on OpenRouter mostly, causing 400s.
+    # We rely on the system prompt to enforce JSON.
     payload = {
         "model": model, 
         "messages": [
             {"role": "user", "content": prompt}
-        ],
-        "response_format": {"type": "json_object"} # Hint for JSON
+        ]
     }
 
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=120) # Increased timeout for Pro models
+        response = requests.post(url, json=payload, headers=headers, timeout=120) 
         
         if response.status_code == 200:
             data = response.json()
@@ -466,7 +467,7 @@ def generate_cart():
     model_choice = data.get('model', 'gemini-3')
     remix_code = data.get('remix_code') 
     multiplayer_enabled = data.get('multiplayer', False)
-    provider = data.get('provider', 'openrouter') # 'openrouter' or 'official'
+    provider = data.get('provider', 'official') # Default changed to official by logic, but fallback handled here
     is_mobile = data.get('is_mobile', False)
     
     if not prompt:
@@ -542,14 +543,14 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
 
     # --- Generation Logic ---
     raw_output = ""
-    model_used = "gemini-3-flash-preview"
+    model_used = "gemini-3-flash-preview" # Default fallback
 
     try:
         if provider == 'openrouter':
-            # Map frontend choices to smarter OpenRouter models
+            # Map frontend choices to OpenRouter models
+            # Note: Gemini 3.0 is NOT on OpenRouter yet. We fallback to 2.0 Flash.
             if model_choice == 'gemini-3':
-                 # Use Gemini 2.0 Pro Exp (Reasoning model) instead of Flash
-                 model_used = "google/gemini-2.0-pro-exp-02-05" 
+                 model_used = "google/gemini-2.0-flash-001" 
             else:
                  model_used = "google/gemini-2.0-flash-001"
 
@@ -560,8 +561,13 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
             if not ai_client:
                 raise Exception("Official API Key not configured on server")
             
-            if model_choice == "gemini-2.5":
+            # Map frontend choices to Official Google GenAI SDK models
+            if model_choice == "gemini-3":
+                model_used = "gemini-3-flash-preview"
+            elif model_choice == "gemini-2.5":
                 model_used = "gemini-2.5-flash"
+            else:
+                model_used = "gemini-3-flash-preview" # Default to 3.0
             
             response = ai_client.models.generate_content(
                 model=model_used,
