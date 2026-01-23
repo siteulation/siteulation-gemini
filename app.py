@@ -4,6 +4,7 @@ import mimetypes
 import traceback
 import json
 import uuid
+import time
 from datetime import datetime, date
 from flask import Flask, request, jsonify, send_from_directory, send_file, Response
 from flask_cors import CORS
@@ -47,6 +48,12 @@ if API_KEY:
     except Exception as e:
         print(f"Gemini Init Error: {e}")
 
+# --- Auth Cache ---
+# Simple in-memory cache to prevent hitting Supabase Rate Limits on every request
+# Key: Token, Value: (User Object, Timestamp)
+AUTH_CACHE = {}
+AUTH_CACHE_TTL = 60 # 1 minute
+
 # --- Helpers ---
 def get_db_headers():
     return {
@@ -78,6 +85,15 @@ def verify_token(req):
     
     token = auth_header.split(" ")[1] if " " in auth_header else auth_header
     
+    # Check Cache
+    now = time.time()
+    if token in AUTH_CACHE:
+        cached_user, timestamp = AUTH_CACHE[token]
+        if now - timestamp < AUTH_CACHE_TTL:
+            return cached_user
+        else:
+            del AUTH_CACHE[token]
+    
     if not SUPABASE_URL or not SUPABASE_ANON_KEY:
         print("Error: Missing Supabase Config")
         return None
@@ -90,11 +106,14 @@ def verify_token(req):
     
     try:
         response = requests.get(url, headers=headers, timeout=5)
+        
         if response.status_code == 200:
             user = response.json()
             user_id = user['id']
             
             # Fetch Profile Data (Banned status + Credits)
+            # We can also cache this logic if needed, but the profile fetch uses Service Role 
+            # which has higher limits than the public Auth endpoint usually.
             profile_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=is_banned,credits,last_reset_date"
             prof_resp = requests.get(profile_url, headers=get_db_headers())
             
@@ -122,8 +141,22 @@ def verify_token(req):
             username = user.get('user_metadata', {}).get('username')
             user['is_admin'] = (username == ADMIN_USERNAME)
             
+            # Cache the result
+            AUTH_CACHE[token] = (user, now)
+            
             return user
+        elif response.status_code == 429:
+            print(f"Supabase Auth Rate Limit Hit: {response.text}")
+            # Raise exception so it propagates as 429 to client instead of generic 401
+            raise Exception("Upstream Auth Rate Limit")
+        else:
+             # Just return None for invalid tokens (401, etc)
+             # print(f"Auth Token Invalid: {response.status_code}")
+             pass
+
     except Exception as e:
+        if str(e) == "Upstream Auth Rate Limit":
+            raise HTTPException(description="Too Many Requests (Auth Provider)", response=Response("Too Many Requests", status=429))
         print(f"Auth verification failed: {e}")
     
     return None
@@ -190,11 +223,17 @@ def generate_with_openrouter(prompt, model):
             else:
                  print(f"OpenRouter Unexpected Response: {data}")
                  raise Exception("Invalid response structure from OpenRouter")
+        elif response.status_code == 429:
+             print("OpenRouter 429 Rate Limit Hit")
+             # Propagate 429
+             raise HTTPException(description="OpenRouter Rate Limit Exceeded", response=Response("AI Provider Busy", status=429))
         else:
             print(f"OpenRouter API Error: {response.status_code} - {response.text}")
             raise Exception(f"OpenRouter API failed with status {response.status_code}")
 
     except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
         print(f"OpenRouter Generation Exception: {e}")
         raise e
 
@@ -271,45 +310,35 @@ def health_check():
 @app.route('/api/auth/signup', methods=['POST'])
 def auth_signup():
     data = request.json or {}
-    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY: 
-        return jsonify({"error": "Server Config Missing (DB/KEY)"}), 500
+    if not SUPABASE_URL: 
+        return jsonify({"error": "Server Config Missing (DB)"}), 500
 
-    # 1. Create User via Admin API (bypasses email confirmation)
-    admin_url = f"{SUPABASE_URL}/auth/v1/admin/users"
-    admin_headers = {
-        "apikey": SUPABASE_SERVICE_ROLE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
-        "Content-Type": "application/json"
-    }
-    create_payload = {
+    # Use the Public Auth Endpoint (enforces email verification if enabled in Supabase)
+    url = f"{SUPABASE_URL}/auth/v1/signup"
+    
+    headers = get_auth_headers()
+    
+    payload = {
         "email": data.get('email'),
         "password": data.get('password'),
-        "email_confirm": True, # Force auto-confirmation
-        "user_metadata": {"username": data.get('username')}
+        "data": {"username": data.get('username')} # User metadata
     }
-    
-    resp = requests.post(admin_url, json=create_payload, headers=admin_headers)
-    
-    if resp.status_code >= 400:
-        try:
-            err = resp.json()
-            msg = err.get("msg") or err.get("error_description") or resp.text
-        except:
-            msg = resp.text
-        return jsonify({"error": msg}), resp.status_code
-
-    # 2. Auto-Sign In to get the token immediately
-    token_url = f"{SUPABASE_URL}/auth/v1/token?grant_type=password"
-    token_payload = {
-        "email": data.get('email'), 
-        "password": data.get('password')
-    }
-    token_resp = requests.post(token_url, json=token_payload, headers=get_auth_headers())
     
     try:
-        return jsonify(token_resp.json()), token_resp.status_code
-    except:
-        return jsonify({"error": "User created but auto-login failed"}), 500
+        resp = requests.post(url, json=payload, headers=headers)
+        
+        if resp.status_code >= 400:
+            try:
+                err = resp.json()
+                msg = err.get("msg") or err.get("error_description") or resp.text
+            except:
+                msg = resp.text
+            return jsonify({"error": msg}), resp.status_code
+            
+        return jsonify(resp.json()), resp.status_code
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/auth/signin', methods=['POST'])
 def auth_signin():

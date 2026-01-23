@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { api } from '../services/api.js';
 import { useNavigate } from 'react-router-dom';
 import { html } from '../utils.js';
-import { Lock, User, Mail, ArrowRight, Loader2 } from 'lucide-react';
+import { Lock, User, Mail, ArrowRight, Loader2, CheckCircle, MailCheck } from 'lucide-react';
 
 const Auth = ({ setUser }) => {
   const [view, setView] = useState('signin');
@@ -12,6 +12,9 @@ const Auth = ({ setUser }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
+  
+  // Verification Sent State
+  const [verificationSent, setVerificationSent] = useState(false);
   
   const navigate = useNavigate();
 
@@ -24,15 +27,18 @@ const Auth = ({ setUser }) => {
       if (view === 'signup') {
         const data = await api.auth.signUp(email, password, username);
         
-        // If we get an access_token, it means the user was auto-confirmed and logged in
+        // If the server returns user data but no session, or just indicates success
+        // we assume verification is required (unless auto-confirm is enabled on the server,
+        // but since we switched to public API, it usually respects Supabase settings)
+        
+        // If we get an access_token immediately, they are logged in (auto-confirm)
         if (data.access_token) {
             api.setToken(data.access_token);
             setUser(data.user);
             navigate('/');
         } else {
-            // Fallback for manual confirm (shouldn't happen with current backend)
-            setError('Account created! Please check your email to verify before signing in.');
-            setView('signin');
+            // Email Verification Flow
+            setVerificationSent(true);
         }
 
       } else {
@@ -55,7 +61,34 @@ const Auth = ({ setUser }) => {
     setView(view === 'signin' ? 'signup' : 'signin');
     setError('');
     setPassword('');
+    setVerificationSent(false);
   };
+
+  if (verificationSent) {
+      return html`
+        <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950 relative">
+            <div className="w-full max-w-sm relative z-10 bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 text-center shadow-2xl">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 text-green-400 mb-6">
+                    <${MailCheck} size=${32} />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2">Check Your Inbox</h2>
+                <p className="text-slate-400 mb-6">
+                    We've sent a verification link to <br/>
+                    <span className="font-bold text-white">${email}</span>.
+                </p>
+                <div className="text-sm text-slate-500 bg-slate-800/50 p-4 rounded-lg mb-6">
+                    Please verify your email address to activate your account and access the terminal.
+                </div>
+                <button 
+                    onClick=${() => window.location.reload()}
+                    className="w-full bg-white text-slate-950 font-bold py-3 rounded-lg hover:bg-slate-200 transition-all"
+                >
+                    Back to Sign In
+                </button>
+            </div>
+        </div>
+      `;
+  }
 
   return html`
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950 relative">
