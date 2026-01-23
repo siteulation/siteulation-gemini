@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ModelType } from '../types.js';
-import { Sparkles, AlertTriangle, Zap, Cpu, GitFork, Users, Globe, Cloud, Server } from 'lucide-react';
+import { Sparkles, AlertTriangle, Zap, Cpu, GitFork, Users, Globe, Cloud, Server, BrainCircuit } from 'lucide-react';
 import { html } from '../utils.js';
 
 const CreateSite = () => {
@@ -10,7 +10,7 @@ const CreateSite = () => {
   const [name, setName] = useState('');
   const [model, setModel] = useState(ModelType.GEMINI_3);
   const [isMultiplayer, setIsMultiplayer] = useState(false);
-  const [provider, setProvider] = useState('openrouter'); // Default back to OpenRouter
+  const [provider, setProvider] = useState('official'); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -36,6 +36,12 @@ const CreateSite = () => {
     }
   }, [location]);
 
+  // Handle Model Selection Updates
+  const selectModel = (selectedModel, selectedProvider) => {
+      setModel(selectedModel);
+      setProvider(selectedProvider);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -44,7 +50,6 @@ const CreateSite = () => {
     const isMobile = window.innerWidth < 768;
 
     try {
-        // We now just send the provider preference to the backend.
         const payload = {
             prompt,
             name,
@@ -160,7 +165,7 @@ const CreateSite = () => {
                 <div className="relative flex items-center justify-center space-x-2">
                   ${loading ? html`
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-950"></div>
-                    <span>${provider === 'openrouter' ? 'Generating via OpenRouter...' : 'Compiling Assets...'}</span>
+                    <span>Processing...</span>
                   ` : html`
                     <${Sparkles} size=${20} />
                     <span>${remixData ? 'Generate Remix' : 'Generate'}</span>
@@ -174,54 +179,66 @@ const CreateSite = () => {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-mono text-slate-400 mb-3 uppercase tracking-wider">
-                Compute Provider
-              </label>
-              <div className="space-y-2">
-                <button
-                    type="button"
-                    onClick=${() => setProvider('openrouter')}
-                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${provider === 'openrouter' ? 'bg-slate-800 border-primary-500 ring-1 ring-primary-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
-                >
-                    <div className="flex justify-between items-start mb-2">
-                        <${Cloud} className=${provider === 'openrouter' ? 'text-primary-400' : 'text-slate-500'} size=${24} />
-                        ${provider === 'openrouter' && html`<span className="text-[10px] bg-primary-500 text-white px-2 py-0.5 rounded-full font-bold">DEFAULT</span>`}
-                    </div>
-                    <div className="font-bold text-white">OpenRouter</div>
-                    <div className="text-xs text-slate-400 mt-1">Multi-model aggregation.</div>
-                </button>
-
-                <button
-                    type="button"
-                    onClick=${() => setProvider('official')}
-                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${provider === 'official' ? 'bg-slate-800 border-primary-500 ring-1 ring-primary-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
-                >
-                    <div className="flex justify-between items-start mb-2">
-                        <${Server} className=${provider === 'official' ? 'text-primary-400' : 'text-slate-500'} size=${24} />
-                    </div>
-                    <div className="font-bold text-white">Official API</div>
-                    <div className="text-xs text-slate-400 mt-1">Official Gemini Key. High Speed & Access to 3.0.</div>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-mono text-slate-400 mb-3 uppercase tracking-wider">
-                AI Core Selection
+                Model Selection
               </label>
               
-              <button
-                type="button"
-                disabled
-                className="w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group bg-slate-800 border-purple-500 ring-1 ring-purple-500 cursor-default"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <${Cpu} className="text-purple-400" size=${24} />
-                  <span className="text-[10px] bg-purple-500 text-white px-2 py-0.5 rounded-full font-bold">LATEST</span>
-                </div>
-                <div className="font-bold text-white">Gemini 3.0 Flash</div>
-                <div className="text-xs text-slate-400 mt-1">Advanced reasoning engine. Best for complex logic.</div>
-              </button>
+              <div className="space-y-3">
+                
+                <!-- Gemini 3.0 (Paid) -->
+                <button
+                    type="button"
+                    onClick=${() => selectModel(ModelType.GEMINI_3, 'official')}
+                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${model === ModelType.GEMINI_3 ? 'bg-slate-800 border-purple-500 ring-1 ring-purple-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
+                >
+                    <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center space-x-2">
+                             <${Zap} className=${model === ModelType.GEMINI_3 ? 'text-purple-400' : 'text-slate-500'} size=${20} />
+                             <span className="font-bold text-white text-sm">Gemini 3.0 Flash</span>
+                        </div>
+                        <span className="text-[10px] bg-purple-500/20 text-purple-200 px-2 py-0.5 rounded-full font-bold border border-purple-500/30">1 CREDIT</span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1 pl-7">Official API. Reasoning engine. High Quality.</div>
+                </button>
+
+                <!-- Gemini 2.0 Free -->
+                <button
+                    type="button"
+                    onClick=${() => selectModel(ModelType.GEMINI_2_FREE, 'openrouter')}
+                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${model === ModelType.GEMINI_2_FREE ? 'bg-slate-800 border-blue-500 ring-1 ring-blue-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
+                >
+                    <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center space-x-2">
+                             <${Cloud} className=${model === ModelType.GEMINI_2_FREE ? 'text-blue-400' : 'text-slate-500'} size=${20} />
+                             <span className="font-bold text-white text-sm">Gemini 2.0 Flash</span>
+                        </div>
+                        <span className="text-[10px] bg-green-500/20 text-green-200 px-2 py-0.5 rounded-full font-bold border border-green-500/30">FREE</span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1 pl-7">OpenRouter. Fast experimental build.</div>
+                </button>
+                
+                <!-- DeepSeek Free -->
+                <button
+                    type="button"
+                    onClick=${() => selectModel(ModelType.DEEPSEEK_FREE, 'openrouter')}
+                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${model === ModelType.DEEPSEEK_FREE ? 'bg-slate-800 border-cyan-500 ring-1 ring-cyan-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
+                >
+                    <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center space-x-2">
+                             <${BrainCircuit} className=${model === ModelType.DEEPSEEK_FREE ? 'text-cyan-400' : 'text-slate-500'} size=${20} />
+                             <span className="font-bold text-white text-sm">DeepSeek R1</span>
+                        </div>
+                        <span className="text-[10px] bg-green-500/20 text-green-200 px-2 py-0.5 rounded-full font-bold border border-green-500/30">FREE</span>
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1 pl-7">OpenRouter. Distilled Llama 70B.</div>
+                </button>
+
+              </div>
             </div>
+            
+             <div className="p-4 bg-slate-800/30 rounded-lg border border-white/5 text-xs text-slate-400">
+                <span className="font-bold text-slate-300">Note:</span> Free models are provided via OpenRouter and may have rate limits or lower availability. Credits reset daily.
+            </div>
+
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { LogOut, Plus, User } from 'lucide-react';
+import { LogOut, Plus, User, Coins } from 'lucide-react';
 import { html } from '../utils.js';
 
 const Navbar = ({ user, setUser }) => {
@@ -30,6 +30,13 @@ const Navbar = ({ user, setUser }) => {
         <div className="flex items-center space-x-4">
           ${user ? html`
             <${React.Fragment}>
+              
+              <!-- Credits Display -->
+              <div className="hidden sm:flex items-center space-x-2 bg-slate-900 border border-white/10 px-3 py-1.5 rounded-full text-xs font-mono font-medium text-purple-300 shadow-inner" title="Daily Credits">
+                 <${Coins} size=${14} />
+                 <span>${user.credits !== undefined ? user.credits : 0}/15</span>
+              </div>
+
               <${Link}
                 to="/create"
                 className="hidden sm:flex items-center space-x-2 bg-white text-slate-950 px-4 py-2 rounded-lg hover:bg-slate-200 transition-all font-semibold text-sm shadow-[0_0_15px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.2)]"

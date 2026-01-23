@@ -7,7 +7,9 @@ create table public.profiles (
   id uuid references auth.users on delete cascade primary key,
   username text unique,
   updated_at timestamp with time zone,
-  is_banned boolean default false
+  is_banned boolean default false,
+  credits integer default 15,
+  last_reset_date date default CURRENT_DATE
 );
 
 -- Create a table for the 'Carts' (Projects)
@@ -58,8 +60,8 @@ create policy "Users can update own profile" on public.profiles
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, username)
-  values (new.id, new.raw_user_meta_data->>'username');
+  insert into public.profiles (id, username, credits, last_reset_date)
+  values (new.id, new.raw_user_meta_data->>'username', 15, CURRENT_DATE);
   return new;
 end;
 $$ language plpgsql security definer;

@@ -4,6 +4,7 @@ import mimetypes
 import traceback
 import json
 import uuid
+from datetime import datetime, date
 from flask import Flask, request, jsonify, send_from_directory, send_file, Response
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -61,6 +62,15 @@ def get_auth_headers():
         "Content-Type": "application/json"
     }
 
+def update_credits(user_id, new_credits, reset_date=None):
+    """Updates the user's credit balance and optionally the reset date."""
+    url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}"
+    payload = {"credits": new_credits}
+    if reset_date:
+        payload["last_reset_date"] = str(reset_date)
+        
+    requests.patch(url, json=payload, headers=get_db_headers())
+
 def verify_token(req):
     auth_header = req.headers.get('Authorization')
     if not auth_header:
@@ -82,16 +92,31 @@ def verify_token(req):
         response = requests.get(url, headers=headers, timeout=5)
         if response.status_code == 200:
             user = response.json()
-            # Enrich with profile status (banned)
             user_id = user['id']
-            profile_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=is_banned"
+            
+            # Fetch Profile Data (Banned status + Credits)
+            profile_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=is_banned,credits,last_reset_date"
             prof_resp = requests.get(profile_url, headers=get_db_headers())
             
             is_banned = False
+            credits = 15
+            last_reset = None
+            
             if prof_resp.status_code == 200 and prof_resp.json():
-                is_banned = prof_resp.json()[0].get('is_banned', False)
+                profile = prof_resp.json()[0]
+                is_banned = profile.get('is_banned', False)
+                credits = profile.get('credits', 15)
+                last_reset_str = profile.get('last_reset_date')
+                
+                # Check for Daily Reset
+                today = date.today()
+                if last_reset_str != str(today):
+                    # It's a new day! Reset credits.
+                    credits = 15
+                    update_credits(user_id, 15, reset_date=today)
             
             user['is_banned'] = is_banned
+            user['credits'] = credits
             
             # Check Admin status
             username = user.get('user_metadata', {}).get('username')
@@ -130,7 +155,7 @@ def serve_html_with_meta(title=None, description=None):
     return html_content
 
 # --- OpenRouter Generation ---
-def generate_with_openrouter(prompt, model="google/gemini-2.0-flash-001"):
+def generate_with_openrouter(prompt, model):
     """
     Generates content using OpenRouter API.
     """
@@ -146,13 +171,13 @@ def generate_with_openrouter(prompt, model="google/gemini-2.0-flash-001"):
         "X-Title": "Siteulation"
     }
     
-    # NOTE: response_format is NOT supported for Gemini models on OpenRouter mostly, causing 400s.
-    # We rely on the system prompt to enforce JSON.
     payload = {
         "model": model, 
         "messages": [
             {"role": "user", "content": prompt}
-        ]
+        ],
+        "max_tokens": 10000, 
+        "temperature": 0.7
     }
 
     try:
@@ -467,11 +492,21 @@ def generate_cart():
     model_choice = data.get('model', 'gemini-3')
     remix_code = data.get('remix_code') 
     multiplayer_enabled = data.get('multiplayer', False)
-    provider = data.get('provider', 'official') # Default handled by frontend now, but fallback here
+    provider = data.get('provider', 'official') 
     is_mobile = data.get('is_mobile', False)
     
     if not prompt:
         return jsonify({"error": "Prompt required"}), 400
+        
+    # --- Cost Calculation & Deduction ---
+    cost = 0
+    if provider == 'official':
+        cost = 1
+        
+    current_credits = user.get('credits', 0)
+    
+    if cost > 0 and current_credits < cost:
+        return jsonify({"error": f"Insufficient credits. Requires {cost} credit(s), you have {current_credits}."}), 402
 
     # --- Construct Final Prompt ---
     
@@ -543,30 +578,27 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
 
     # --- Generation Logic ---
     raw_output = ""
-    model_used = "gemini-3-flash-preview" # Default fallback
+    model_used = ""
 
     try:
         if provider == 'openrouter':
-            # Map frontend choices to OpenRouter models
-            if model_choice == 'gemini-3':
-                 model_used = "google/gemini-3-flash-preview" # Updated to OpenRouter specific ID for 3.0 Flash
+            # Mapping for Free OpenRouter models
+            if model_choice == 'deepseek-free':
+                model_used = "deepseek/deepseek-r1:free"
+            elif model_choice == 'gemini-2-free':
+                model_used = "google/gemini-2.0-flash-exp:free"
             else:
-                 model_used = "google/gemini-2.0-flash-001"
+                model_used = "google/gemini-2.0-flash-exp:free" # Default Fallback
 
             openrouter_prompt = f"{system_instruction}\n\n{final_prompt}"
             raw_output = generate_with_openrouter(openrouter_prompt, model=model_used)
+            
         else:
-            # Official API
+            # Official API - Exclusive to Gemini 3 Flash
             if not ai_client:
                 raise Exception("Official API Key not configured on server")
             
-            # Map frontend choices to Official Google GenAI SDK models
-            if model_choice == "gemini-3":
-                model_used = "gemini-3-flash-preview"
-            elif model_choice == "gemini-2.5":
-                model_used = "gemini-2.5-flash"
-            else:
-                model_used = "gemini-3-flash-preview" # Default to 3.0
+            model_used = "gemini-3-flash-preview"
             
             response = ai_client.models.generate_content(
                 model=model_used,
@@ -581,7 +613,7 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
                 raise Exception("AI returned empty response")
             raw_output = response.text
 
-        # Cleanup Code (Handle markdown fences if the AI ignores strict instructions)
+        # Cleanup Code
         cleaned_output = raw_output.strip()
         if cleaned_output.startswith("```json"):
             cleaned_output = cleaned_output[7:]
@@ -592,11 +624,8 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
         
         # Validate JSON
         try:
-            # Ensure it's valid JSON
             json_structure = json.loads(cleaned_output)
-            # Ensure it has 'files' array
             if 'files' not in json_structure:
-                 # Attempt to fix if it just returned the array directly
                  if isinstance(json_structure, list):
                      json_structure = {"files": json_structure}
                  else:
@@ -606,7 +635,6 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
 
         except json.JSONDecodeError:
             print("JSON Parsing Failed, falling back to raw string storage")
-            # Fallback: Store as a single file structure manually wrapped
             fallback_struct = {
                 "files": [
                     {"name": "index.html", "content": raw_output}
@@ -627,7 +655,7 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
             "name": name,
             "prompt": prompt,
             "model": model_used,
-            "code": final_code_storage, # Stores JSON string now
+            "code": final_code_storage,
             "views": 0,
             "is_listed": False 
         }
@@ -635,6 +663,11 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
         
         if db_resp.status_code >= 300:
             raise Exception(f"DB Error: {db_resp.text}")
+        
+        # Deduct Credit if applicable
+        if cost > 0:
+            new_credits = current_credits - cost
+            update_credits(user['id'], new_credits)
             
         return jsonify({"success": True, "cart": db_resp.json()[0]}), 201
     
