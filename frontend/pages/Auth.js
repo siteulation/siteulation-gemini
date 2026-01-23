@@ -68,7 +68,7 @@ const Auth = ({ setUser }) => {
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
             <img 
-              src="/siteulationlogo.png?v=3" 
+              src="https://raw.githubusercontent.com/siteulation/Siteulation/refs/heads/main/siteulationlogo.png" 
               alt="Siteulation Logo" 
               className="w-20 h-20 rounded-2xl shadow-2xl shadow-primary-500/30" 
             />
