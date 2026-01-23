@@ -2,6 +2,8 @@ import os
 import requests
 import mimetypes
 import traceback
+import json
+import uuid
 from flask import Flask, request, jsonify, send_from_directory, send_file, Response
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -125,6 +127,56 @@ def serve_html_with_meta(title=None, description=None):
     html_content = html_content.replace(f'<title>{default_title}</title>', f'<title>{target_title}</title>')
     
     return html_content
+
+# --- Puter API Workaround ---
+def generate_with_puter(prompt):
+    """
+    Attempts to generate content using Puter's API via a direct HTTP call.
+    This mimics the behavior of the client-side SDK but runs on the server.
+    """
+    url = "https://api.puter.com/drivers/call"
+    
+    payload = {
+        "interface": "puter-chat-completion-v1",
+        "method": "chat",
+        "args": {
+            "message": prompt,
+            "model": "gpt-4o-mini" # Default fallback, Puter might map this
+        }
+    }
+    
+    headers = {
+        "Content-Type": "application/json",
+        "Origin": "https://puter.com",
+        "Referer": "https://puter.com/",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=60)
+        
+        if response.status_code == 200:
+            data = response.json()
+            # The structure returned by Puter drivers can vary, usually it's in result
+            if 'result' in data:
+                result = data['result']
+                # Sometimes result is an object with text, sometimes a string
+                if isinstance(result, dict) and 'message' in result:
+                     return result['message']['content'] if 'content' in result['message'] else str(result)
+                if isinstance(result, str):
+                    return result
+                # Check for other structures
+                return str(result)
+            else:
+                 print(f"Puter Unexpected Response: {data}")
+                 raise Exception("Invalid response structure from Puter")
+        else:
+            print(f"Puter API Error: {response.status_code} - {response.text}")
+            raise Exception(f"Puter API failed with status {response.status_code}")
+
+    except Exception as e:
+        print(f"Puter Generation Exception: {e}")
+        raise e
 
 # --- SocketIO Events ---
 
@@ -420,31 +472,22 @@ def generate_cart():
     model_choice = data.get('model', 'gemini-3')
     remix_code = data.get('remix_code') 
     multiplayer_enabled = data.get('multiplayer', False)
+    provider = data.get('provider', 'puter') # 'puter' or 'official'
     
-    # --- Check for Pre-Generated Code (Client-Side / Puter) ---
-    pre_generated_code = data.get('pre_generated_code')
+    if not prompt:
+        return jsonify({"error": "Prompt required"}), 400
 
-    if pre_generated_code:
-        # Client already did the work, just save it
-        code = pre_generated_code.replace("```html", "").replace("```", "")
-        model_name = "puter-gemini-3"
-        
-    else:
-        # --- Server-Side Generation (Official API) ---
-        if not ai_client:
-            return jsonify({"error": "AI not initialized (Server Key Missing)"}), 500
-        
-        if not prompt:
-            return jsonify({"error": "Prompt required"}), 400
+    # --- Construct Final Prompt (Shared logic) ---
+    final_prompt = ""
+    system_instruction = (
+        "You are Siteulation AI. Generate a SINGLE-FILE HTML app. "
+        "Include CSS in <style> and JS in <script>. "
+        "Do NOT use markdown. Return raw HTML only. "
+        "Do not include any explanations, only the code."
+    )
 
-        if model_choice == "gemini-2.5":
-            model_name = "gemini-2.5-flash"
-        else:
-            model_name = "gemini-3-flash-preview"
-        
-        # Construct prompt
-        if remix_code:
-            final_prompt = f"""
+    if remix_code:
+        final_prompt += f"""
 I want to Remix/Modify this existing HTML application code.
 
 EXISTING CODE:
@@ -453,12 +496,12 @@ EXISTING CODE:
 USER REQUEST:
 {prompt}
 """
-        else:
-            final_prompt = prompt
+    else:
+        final_prompt += prompt
 
-        if multiplayer_enabled:
-            multiplayer_prompt = """
-            
+    if multiplayer_enabled:
+        multiplayer_prompt = """
+        
 *** IMPORTANT: MULTIPLAYER MODE ENABLED ***
 You MUST implement real-time multiplayer functionality using the provided WebSocket server.
 
@@ -483,34 +526,47 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
 
 **Note:** The server DOES NOT echo messages back to the sender. You must append your own messages/state updates to your local view immediately after sending.
 """
-            final_prompt += multiplayer_prompt
+        final_prompt += multiplayer_prompt
+        
+    final_prompt += "\nGenerate the updated single-file HTML app."
+
+    # --- Generation Logic ---
+    code = ""
+    model_used = "gemini-3-flash-preview"
+
+    try:
+        if provider == 'puter':
+            model_used = "puter-ai"
+            # prepend system instruction to prompt for puter as it's a simple chat interface
+            puter_prompt = f"{system_instruction}\n\n{final_prompt}"
+            code = generate_with_puter(puter_prompt)
+        else:
+            # Official API
+            if not ai_client:
+                raise Exception("Official API Key not configured on server")
             
-        final_prompt += "\nGenerate the updated single-file HTML app."
-
-        system_instruction = (
-            "You are Siteulation AI. Generate a SINGLE-FILE HTML app. "
-            "Include CSS in <style> and JS in <script>. "
-            "Do NOT use markdown. Return raw HTML only."
-        )
-
-        try:
+            if model_choice == "gemini-2.5":
+                model_used = "gemini-2.5-flash"
+            
             response = ai_client.models.generate_content(
-                model=model_name,
+                model=model_used,
                 contents=final_prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
                     temperature=0.7
                 )
             )
-
             if not response.text:
                 raise Exception("AI returned empty response")
+            code = response.text
 
-            code = response.text.replace("```html", "").replace("```", "")
-        
-        except Exception as e:
-            print(f"Gen Error: {e}")
-            return jsonify({"error": str(e)}), 500
+        # Cleanup Code (Remove markdown fences if present)
+        code = code.replace("```html", "").replace("```", "")
+        if code.startswith("xml"): code = code[3:]
+
+    except Exception as e:
+        print(f"Generation Error ({provider}): {e}")
+        return jsonify({"error": str(e)}), 500
 
     # --- Save to DB ---
     try:
@@ -520,7 +576,7 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
             "username": user.get('user_metadata', {}).get('username', 'Anonymous'),
             "name": name,
             "prompt": prompt,
-            "model": model_name,
+            "model": model_used,
             "code": code,
             "views": 0,
             "is_listed": False 

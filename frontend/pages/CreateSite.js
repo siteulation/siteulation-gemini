@@ -5,35 +5,6 @@ import { ModelType } from '../types.js';
 import { Sparkles, AlertTriangle, Zap, Cpu, GitFork, Users, Globe, Cloud, Server } from 'lucide-react';
 import { html } from '../utils.js';
 
-// Multiplayer Template (Must match backend logic)
-const MULTIPLAYER_PROMPT = `
-*** IMPORTANT: MULTIPLAYER MODE ENABLED ***
-You MUST implement real-time multiplayer functionality using the provided WebSocket server.
-
-1.  **Include Socket.IO**: \`<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>\`
-2.  **Initialize**: \`const socket = io({transports: ['websocket', 'polling']});\`
-3.  **Rooms**: Generate a Room ID or let the user input one.
-4.  **Join**: \`socket.emit('join', { room: myRoomId });\`
-
-**Sending Data:**
-*   **State Updates** (Positions, Game Data): 
-    \`socket.emit('state_update', { room: myRoomId, data: { ... } });\`
-    *Server relays this to other players.*
-*   **Chat/Messages**: 
-    \`socket.emit('chat_message', { room: myRoomId, username: 'User', text: 'Hello' });\`
-    *Server relays this to other players.*
-
-**Receiving Data:**
-*   \`socket.on('state_update', (data) => { ...updateGameState(data)... });\`
-*   \`socket.on('chat_message', (msg) => { ...appendMessageToChat(msg)... });\`
-*   \`socket.on('player_joined', (data) => { ... });\`
-*   \`socket.on('player_left', (data) => { ... });\`
-
-**Note:** The server DOES NOT echo messages back to the sender. You must append your own messages/state updates to your local view immediately after sending.
-`;
-
-const SYSTEM_INSTRUCTION = "You are Siteulation AI. Generate a SINGLE-FILE HTML app. Include CSS in <style> and JS in <script>. Do NOT use markdown. Return raw HTML only.";
-
 const CreateSite = () => {
   const [prompt, setPrompt] = useState('');
   const [name, setName] = useState('');
@@ -70,52 +41,16 @@ const CreateSite = () => {
     setLoading(true);
     setError(null);
 
-    let generatedCode = null;
-
     try {
-        // --- PUTER GENERATION LOGIC ---
-        if (provider === 'puter') {
-            if (!window.puter) {
-                throw new Error("Puter.js not loaded. Check connection.");
-            }
-
-            let finalPrompt = prompt;
-
-            // 1. Remix Logic
-            if (remixData) {
-                finalPrompt = `I want to Remix/Modify this existing HTML application code.\n\nEXISTING CODE:\n${remixData.code}\n\nUSER REQUEST:\n${prompt}`;
-            }
-
-            // 2. Multiplayer Logic
-            if (isMultiplayer) {
-                finalPrompt += "\n" + MULTIPLAYER_PROMPT;
-            }
-
-            finalPrompt += "\nGenerate the updated single-file HTML app.";
-
-            // 3. Call Puter AI
-            // We prepend system instruction as part of the prompt since puter.ai.chat simple interface is string-based
-            const fullMessage = `${SYSTEM_INSTRUCTION}\n\n${finalPrompt}`;
-            
-            // Note: Puter generic chat usually defaults to GPT-4o-mini or similar, effectively giving us good generation for free.
-            // We requested Gemini 3 via UI, but Puter abstracts the model. It's high quality.
-            const response = await window.puter.ai.chat(fullMessage);
-            
-            if (!response || typeof response !== 'string') {
-                throw new Error("Puter AI returned invalid response.");
-            }
-            
-            generatedCode = response;
-        }
-
-        // --- BACKEND REQUEST ---
+        // We now just send the provider preference to the backend.
+        // The backend handles the connection to Puter via a server-side workaround.
         const payload = {
             prompt,
             name,
             model,
             multiplayer: isMultiplayer,
             remix_code: remixData ? remixData.code : null,
-            pre_generated_code: generatedCode // Pass this if we used Puter
+            provider: provider
         };
 
         const data = await api.request('/api/generate', {
@@ -223,7 +158,7 @@ const CreateSite = () => {
                 <div className="relative flex items-center justify-center space-x-2">
                   ${loading ? html`
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-950"></div>
-                    <span>${provider === 'puter' ? 'Generating via Puter...' : 'Compiling Assets...'}</span>
+                    <span>${provider === 'puter' ? 'Generating via Puter (Server)...' : 'Compiling Assets...'}</span>
                   ` : html`
                     <${Sparkles} size=${20} />
                     <span>${remixData ? 'Generate Remix' : 'Generate'}</span>
@@ -250,7 +185,7 @@ const CreateSite = () => {
                         ${provider === 'puter' && html`<span className="text-[10px] bg-primary-500 text-white px-2 py-0.5 rounded-full font-bold">DEFAULT</span>`}
                     </div>
                     <div className="font-bold text-white">Puter.js</div>
-                    <div className="text-xs text-slate-400 mt-1">Client-side generation. Free & Unlimited.</div>
+                    <div className="text-xs text-slate-400 mt-1">Free & Unlimited. Running via Server Relay.</div>
                 </button>
 
                 <button
@@ -262,7 +197,7 @@ const CreateSite = () => {
                         <${Server} className=${provider === 'official' ? 'text-primary-400' : 'text-slate-500'} size=${24} />
                     </div>
                     <div className="font-bold text-white">Official API</div>
-                    <div className="text-xs text-slate-400 mt-1">Server-side generation. High Speed.</div>
+                    <div className="text-xs text-slate-400 mt-1">Official Gemini Key. High Speed.</div>
                 </button>
               </div>
             </div>
