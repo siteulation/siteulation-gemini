@@ -130,7 +130,7 @@ def serve_html_with_meta(title=None, description=None):
     return html_content
 
 # --- OpenRouter Generation ---
-def generate_with_openrouter(prompt):
+def generate_with_openrouter(prompt, model="google/gemini-2.0-flash-001"):
     """
     Generates content using OpenRouter API.
     """
@@ -147,7 +147,7 @@ def generate_with_openrouter(prompt):
     }
     
     payload = {
-        "model": "google/gemini-2.0-flash-001", # Cost effective, high quality
+        "model": model, 
         "messages": [
             {"role": "user", "content": prompt}
         ],
@@ -155,7 +155,7 @@ def generate_with_openrouter(prompt):
     }
 
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=60)
+        response = requests.post(url, json=payload, headers=headers, timeout=120) # Increased timeout for Pro models
         
         if response.status_code == 200:
             data = response.json()
@@ -546,9 +546,15 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
 
     try:
         if provider == 'openrouter':
-            model_used = "openrouter-gemini-2"
+            # Map frontend choices to smarter OpenRouter models
+            if model_choice == 'gemini-3':
+                 # Use Gemini 2.0 Pro Exp (Reasoning model) instead of Flash
+                 model_used = "google/gemini-2.0-pro-exp-02-05" 
+            else:
+                 model_used = "google/gemini-2.0-flash-001"
+
             openrouter_prompt = f"{system_instruction}\n\n{final_prompt}"
-            raw_output = generate_with_openrouter(openrouter_prompt)
+            raw_output = generate_with_openrouter(openrouter_prompt, model=model_used)
         else:
             # Official API
             if not ai_client:
