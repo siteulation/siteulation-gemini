@@ -414,28 +414,37 @@ def generate_cart():
     if user.get('is_banned'):
          return jsonify({"error": "You have been banned from generating projects."}), 403
     
-    if not ai_client:
-        return jsonify({"error": "AI not initialized"}), 500
-
     data = request.json or {}
     prompt = data.get('prompt')
-    name = data.get('name') or prompt # Default name to prompt if not set
-    model_choice = data.get('model', 'gemini-3') # Default to Gemini 3
-    remix_code = data.get('remix_code') # The code from the original cart if remixing
+    name = data.get('name') or prompt
+    model_choice = data.get('model', 'gemini-3')
+    remix_code = data.get('remix_code') 
     multiplayer_enabled = data.get('multiplayer', False)
     
-    if not prompt:
-        return jsonify({"error": "Prompt required"}), 400
+    # --- Check for Pre-Generated Code (Client-Side / Puter) ---
+    pre_generated_code = data.get('pre_generated_code')
 
-    # Allow legacy 2.5 support if requested explicitly, otherwise default to 3
-    if model_choice == "gemini-2.5":
-        model_name = "gemini-2.5-flash"
+    if pre_generated_code:
+        # Client already did the work, just save it
+        code = pre_generated_code.replace("```html", "").replace("```", "")
+        model_name = "puter-gemini-3"
+        
     else:
-        model_name = "gemini-3-flash-preview"
-    
-    # Construct prompt based on if it is a remix
-    if remix_code:
-        final_prompt = f"""
+        # --- Server-Side Generation (Official API) ---
+        if not ai_client:
+            return jsonify({"error": "AI not initialized (Server Key Missing)"}), 500
+        
+        if not prompt:
+            return jsonify({"error": "Prompt required"}), 400
+
+        if model_choice == "gemini-2.5":
+            model_name = "gemini-2.5-flash"
+        else:
+            model_name = "gemini-3-flash-preview"
+        
+        # Construct prompt
+        if remix_code:
+            final_prompt = f"""
 I want to Remix/Modify this existing HTML application code.
 
 EXISTING CODE:
@@ -444,13 +453,12 @@ EXISTING CODE:
 USER REQUEST:
 {prompt}
 """
-    else:
-        final_prompt = prompt
+        else:
+            final_prompt = prompt
 
-    # Inject Multiplayer Instructions if enabled
-    if multiplayer_enabled:
-        multiplayer_prompt = """
-        
+        if multiplayer_enabled:
+            multiplayer_prompt = """
+            
 *** IMPORTANT: MULTIPLAYER MODE ENABLED ***
 You MUST implement real-time multiplayer functionality using the provided WebSocket server.
 
@@ -475,32 +483,37 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
 
 **Note:** The server DOES NOT echo messages back to the sender. You must append your own messages/state updates to your local view immediately after sending.
 """
-        final_prompt += multiplayer_prompt
-        
-    final_prompt += "\nGenerate the updated single-file HTML app."
+            final_prompt += multiplayer_prompt
+            
+        final_prompt += "\nGenerate the updated single-file HTML app."
 
-    system_instruction = (
-        "You are Siteulation AI. Generate a SINGLE-FILE HTML app. "
-        "Include CSS in <style> and JS in <script>. "
-        "Do NOT use markdown. Return raw HTML only."
-    )
-
-    try:
-        response = ai_client.models.generate_content(
-            model=model_name,
-            contents=final_prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.7
-            )
+        system_instruction = (
+            "You are Siteulation AI. Generate a SINGLE-FILE HTML app. "
+            "Include CSS in <style> and JS in <script>. "
+            "Do NOT use markdown. Return raw HTML only."
         )
 
-        if not response.text:
-            raise Exception("AI returned empty response (possibly blocked by safety filters)")
+        try:
+            response = ai_client.models.generate_content(
+                model=model_name,
+                contents=final_prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    temperature=0.7
+                )
+            )
 
-        code = response.text.replace("```html", "").replace("```", "")
+            if not response.text:
+                raise Exception("AI returned empty response")
+
+            code = response.text.replace("```html", "").replace("```", "")
         
-        # Save to DB
+        except Exception as e:
+            print(f"Gen Error: {e}")
+            return jsonify({"error": str(e)}), 500
+
+    # --- Save to DB ---
+    try:
         url = f"{SUPABASE_URL}/rest/v1/carts"
         payload = {
             "user_id": user['id'],
@@ -510,7 +523,7 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
             "model": model_name,
             "code": code,
             "views": 0,
-            "is_listed": False # Explicitly unlisted by default
+            "is_listed": False 
         }
         db_resp = requests.post(url, json=payload, headers=get_db_headers())
         
@@ -518,9 +531,9 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
             raise Exception(f"DB Error: {db_resp.text}")
             
         return jsonify({"success": True, "cart": db_resp.json()[0]}), 201
-
+    
     except Exception as e:
-        print(f"Gen Error: {e}")
+        print(f"Save Error: {e}")
         return jsonify({"error": str(e)}), 500
 
 # --- Serving & Meta Injection ---
