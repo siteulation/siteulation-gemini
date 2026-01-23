@@ -467,7 +467,7 @@ def generate_cart():
     model_choice = data.get('model', 'gemini-3')
     remix_code = data.get('remix_code') 
     multiplayer_enabled = data.get('multiplayer', False)
-    provider = data.get('provider', 'official') # Default changed to official by logic, but fallback handled here
+    provider = data.get('provider', 'official') # Default handled by frontend now, but fallback here
     is_mobile = data.get('is_mobile', False)
     
     if not prompt:
@@ -548,9 +548,8 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
     try:
         if provider == 'openrouter':
             # Map frontend choices to OpenRouter models
-            # Note: Gemini 3.0 is NOT on OpenRouter yet. We fallback to 2.0 Flash.
             if model_choice == 'gemini-3':
-                 model_used = "google/gemini-2.0-flash-001" 
+                 model_used = "google/gemini-3-flash-preview" # Updated to OpenRouter specific ID for 3.0 Flash
             else:
                  model_used = "google/gemini-2.0-flash-001"
 
@@ -702,7 +701,7 @@ def serve_site_preview(id):
 def serve_spa(path):
     # If it starts with api/, it's a 404'd API call
     if path.startswith('api/'):
-        return jsonify({"error": f"API Endpoint not found: {path}"}), 404
+        return jsonify({"error": f"API Endpoint not found: {request.path}"}), 404
         
     # Standard catch-all serves index.html with default meta
     return serve_html_with_meta()

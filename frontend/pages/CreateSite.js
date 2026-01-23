@@ -10,7 +10,7 @@ const CreateSite = () => {
   const [name, setName] = useState('');
   const [model, setModel] = useState(ModelType.GEMINI_3);
   const [isMultiplayer, setIsMultiplayer] = useState(false);
-  const [provider, setProvider] = useState('official'); // 'openrouter' | 'official' - Defaulting to official for 3.0
+  const [provider, setProvider] = useState('openrouter'); // Default back to OpenRouter
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -179,27 +179,27 @@ const CreateSite = () => {
               <div className="space-y-2">
                 <button
                     type="button"
-                    onClick=${() => setProvider('official')}
-                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${provider === 'official' ? 'bg-slate-800 border-primary-500 ring-1 ring-primary-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
-                >
-                    <div className="flex justify-between items-start mb-2">
-                        <${Server} className=${provider === 'official' ? 'text-primary-400' : 'text-slate-500'} size=${24} />
-                        ${provider === 'official' && html`<span className="text-[10px] bg-primary-500 text-white px-2 py-0.5 rounded-full font-bold">DEFAULT</span>`}
-                    </div>
-                    <div className="font-bold text-white">Official API</div>
-                    <div className="text-xs text-slate-400 mt-1">Official Gemini Key. High Speed & Access to 3.0.</div>
-                </button>
-
-                <button
-                    type="button"
                     onClick=${() => setProvider('openrouter')}
                     className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${provider === 'openrouter' ? 'bg-slate-800 border-primary-500 ring-1 ring-primary-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
                 >
                     <div className="flex justify-between items-start mb-2">
                         <${Cloud} className=${provider === 'openrouter' ? 'text-primary-400' : 'text-slate-500'} size=${24} />
+                        ${provider === 'openrouter' && html`<span className="text-[10px] bg-primary-500 text-white px-2 py-0.5 rounded-full font-bold">DEFAULT</span>`}
                     </div>
                     <div className="font-bold text-white">OpenRouter</div>
                     <div className="text-xs text-slate-400 mt-1">Multi-model aggregation.</div>
+                </button>
+
+                <button
+                    type="button"
+                    onClick=${() => setProvider('official')}
+                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${provider === 'official' ? 'bg-slate-800 border-primary-500 ring-1 ring-primary-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
+                >
+                    <div className="flex justify-between items-start mb-2">
+                        <${Server} className=${provider === 'official' ? 'text-primary-400' : 'text-slate-500'} size=${24} />
+                    </div>
+                    <div className="font-bold text-white">Official API</div>
+                    <div className="text-xs text-slate-400 mt-1">Official Gemini Key. High Speed & Access to 3.0.</div>
                 </button>
               </div>
             </div>
