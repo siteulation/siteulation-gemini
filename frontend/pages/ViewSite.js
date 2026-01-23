@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
 import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File } from 'lucide-react';
 import { html, bundleProject } from '../utils.js';
+import Editor from '@monaco-editor/react';
 
 const ViewSite = ({ user }) => {
   const { id } = useParams();
@@ -138,6 +139,25 @@ const ViewSite = ({ user }) => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const getLanguageFromFilename = (filename) => {
+      if (!filename) return 'plaintext';
+      const ext = filename.split('.').pop().toLowerCase();
+      switch (ext) {
+          case 'html': return 'html';
+          case 'js': return 'javascript';
+          case 'css': return 'css';
+          case 'json': return 'json';
+          default: return 'plaintext';
+      }
+  };
+
+  const handleEditorChange = (value) => {
+    // Optional: Allow editing in memory
+    const newFiles = [...files];
+    newFiles[activeFileIndex].content = value;
+    setFiles(newFiles);
   };
 
   if (loading) {
@@ -350,10 +370,29 @@ const ViewSite = ({ user }) => {
                     </div>
                 </div>
 
-                <!-- Code Editor View -->
-                <div className="flex-1 overflow-auto p-4 bg-slate-900 relative">
-                  <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-slate-900 to-transparent h-4 z-10 pointer-events-none"></div>
-                  <pre className="text-xs font-mono text-slate-300 whitespace-pre-wrap font-thin leading-relaxed selection:bg-primary-500/30 font-fira-code">${files[activeFileIndex]?.content}</pre>
+                <!-- Code Editor View (Monaco) -->
+                <div className="flex-1 overflow-hidden bg-[#1e1e1e]">
+                  <${Editor}
+                     height="100%"
+                     theme="vs-dark"
+                     language=${getLanguageFromFilename(files[activeFileIndex]?.name)}
+                     value=${files[activeFileIndex]?.content || ''}
+                     onChange=${handleEditorChange}
+                     options=${{
+                         minimap: { enabled: false },
+                         fontSize: 13,
+                         readOnly: false, // Allow local editing for experimentation
+                         fontFamily: "'Fira Code', 'JetBrains Mono', monospace",
+                         scrollBeyondLastLine: false,
+                         padding: { top: 16 }
+                     }}
+                     loading=${html`
+                         <div className="flex items-center justify-center h-full text-slate-400 space-x-2">
+                             <${Loader2} className="animate-spin" size=${20} />
+                             <span>Initializing Editor...</span>
+                         </div>
+                     `}
+                  />
                 </div>
             </div>
           </div>
