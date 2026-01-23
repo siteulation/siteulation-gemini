@@ -21,6 +21,7 @@ INDEX_PATH = os.path.join(BASE_DIR, 'index.html')
 
 # --- Env Vars ---
 API_KEY = os.environ.get("APIKEY")
+OPENROUTER_KEY = os.environ.get("OPENROUTERKEY")
 SUPABASE_URL = os.environ.get("DATABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY") # Secret Service Role Key
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY") # Public Anon Key
@@ -128,28 +129,28 @@ def serve_html_with_meta(title=None, description=None):
     
     return html_content
 
-# --- Puter API Workaround ---
-def generate_with_puter(prompt):
+# --- OpenRouter Generation ---
+def generate_with_openrouter(prompt):
     """
-    Attempts to generate content using Puter's API via a direct HTTP call.
-    This mimics the behavior of the client-side SDK but runs on the server.
+    Generates content using OpenRouter API.
     """
-    url = "https://api.puter.com/drivers/call"
-    
-    payload = {
-        "interface": "puter-chat-completion-v1",
-        "method": "chat",
-        "args": {
-            "message": prompt,
-            "model": "gpt-4o-mini" # Default fallback, Puter might map this
-        }
-    }
+    if not OPENROUTER_KEY:
+        raise Exception("OpenRouter Key not configured on server")
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
     
     headers = {
+        "Authorization": f"Bearer {OPENROUTER_KEY}",
         "Content-Type": "application/json",
-        "Origin": "https://puter.com",
-        "Referer": "https://puter.com/",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "HTTP-Referer": "https://siteulation.com",
+        "X-Title": "Siteulation"
+    }
+    
+    payload = {
+        "model": "google/gemini-2.0-flash-001", # Cost effective, high quality
+        "messages": [
+            {"role": "user", "content": prompt}
+        ]
     }
 
     try:
@@ -157,25 +158,17 @@ def generate_with_puter(prompt):
         
         if response.status_code == 200:
             data = response.json()
-            # The structure returned by Puter drivers can vary, usually it's in result
-            if 'result' in data:
-                result = data['result']
-                # Sometimes result is an object with text, sometimes a string
-                if isinstance(result, dict) and 'message' in result:
-                     return result['message']['content'] if 'content' in result['message'] else str(result)
-                if isinstance(result, str):
-                    return result
-                # Check for other structures
-                return str(result)
+            if 'choices' in data and len(data['choices']) > 0:
+                return data['choices'][0]['message']['content']
             else:
-                 print(f"Puter Unexpected Response: {data}")
-                 raise Exception("Invalid response structure from Puter")
+                 print(f"OpenRouter Unexpected Response: {data}")
+                 raise Exception("Invalid response structure from OpenRouter")
         else:
-            print(f"Puter API Error: {response.status_code} - {response.text}")
-            raise Exception(f"Puter API failed with status {response.status_code}")
+            print(f"OpenRouter API Error: {response.status_code} - {response.text}")
+            raise Exception(f"OpenRouter API failed with status {response.status_code}")
 
     except Exception as e:
-        print(f"Puter Generation Exception: {e}")
+        print(f"OpenRouter Generation Exception: {e}")
         raise e
 
 # --- SocketIO Events ---
@@ -472,7 +465,7 @@ def generate_cart():
     model_choice = data.get('model', 'gemini-3')
     remix_code = data.get('remix_code') 
     multiplayer_enabled = data.get('multiplayer', False)
-    provider = data.get('provider', 'puter') # 'puter' or 'official'
+    provider = data.get('provider', 'openrouter') # 'openrouter' or 'official'
     
     if not prompt:
         return jsonify({"error": "Prompt required"}), 400
@@ -535,11 +528,11 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
     model_used = "gemini-3-flash-preview"
 
     try:
-        if provider == 'puter':
-            model_used = "puter-ai"
-            # prepend system instruction to prompt for puter as it's a simple chat interface
-            puter_prompt = f"{system_instruction}\n\n{final_prompt}"
-            code = generate_with_puter(puter_prompt)
+        if provider == 'openrouter':
+            model_used = "openrouter-gemini-2"
+            # prepend system instruction to prompt for openrouter as we are using simple message structure
+            openrouter_prompt = f"{system_instruction}\n\n{final_prompt}"
+            code = generate_with_openrouter(openrouter_prompt)
         else:
             # Official API
             if not ai_client:

@@ -10,7 +10,7 @@ const CreateSite = () => {
   const [name, setName] = useState('');
   const [model, setModel] = useState(ModelType.GEMINI_3);
   const [isMultiplayer, setIsMultiplayer] = useState(false);
-  const [provider, setProvider] = useState('puter'); // 'puter' | 'official'
+  const [provider, setProvider] = useState('openrouter'); // 'openrouter' | 'official'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -43,7 +43,6 @@ const CreateSite = () => {
 
     try {
         // We now just send the provider preference to the backend.
-        // The backend handles the connection to Puter via a server-side workaround.
         const payload = {
             prompt,
             name,
@@ -158,7 +157,7 @@ const CreateSite = () => {
                 <div className="relative flex items-center justify-center space-x-2">
                   ${loading ? html`
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-950"></div>
-                    <span>${provider === 'puter' ? 'Generating via Puter (Server)...' : 'Compiling Assets...'}</span>
+                    <span>${provider === 'openrouter' ? 'Generating via OpenRouter...' : 'Compiling Assets...'}</span>
                   ` : html`
                     <${Sparkles} size=${20} />
                     <span>${remixData ? 'Generate Remix' : 'Generate'}</span>
@@ -177,15 +176,15 @@ const CreateSite = () => {
               <div className="space-y-2">
                 <button
                     type="button"
-                    onClick=${() => setProvider('puter')}
-                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${provider === 'puter' ? 'bg-slate-800 border-primary-500 ring-1 ring-primary-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
+                    onClick=${() => setProvider('openrouter')}
+                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${provider === 'openrouter' ? 'bg-slate-800 border-primary-500 ring-1 ring-primary-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
                 >
                     <div className="flex justify-between items-start mb-2">
-                        <${Cloud} className=${provider === 'puter' ? 'text-primary-400' : 'text-slate-500'} size=${24} />
-                        ${provider === 'puter' && html`<span className="text-[10px] bg-primary-500 text-white px-2 py-0.5 rounded-full font-bold">DEFAULT</span>`}
+                        <${Cloud} className=${provider === 'openrouter' ? 'text-primary-400' : 'text-slate-500'} size=${24} />
+                        ${provider === 'openrouter' && html`<span className="text-[10px] bg-primary-500 text-white px-2 py-0.5 rounded-full font-bold">DEFAULT</span>`}
                     </div>
-                    <div className="font-bold text-white">Puter.js</div>
-                    <div className="text-xs text-slate-400 mt-1">Free & Unlimited. Running via Server Relay.</div>
+                    <div className="font-bold text-white">OpenRouter</div>
+                    <div className="text-xs text-slate-400 mt-1">Multi-model aggregation.</div>
                 </button>
 
                 <button
