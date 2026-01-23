@@ -150,7 +150,8 @@ def generate_with_openrouter(prompt):
         "model": "google/gemini-2.0-flash-001", # Cost effective, high quality
         "messages": [
             {"role": "user", "content": prompt}
-        ]
+        ],
+        "response_format": {"type": "json_object"} # Hint for JSON
     }
 
     try:
@@ -471,30 +472,44 @@ def generate_cart():
     if not prompt:
         return jsonify({"error": "Prompt required"}), 400
 
-    # --- Construct Final Prompt (Shared logic) ---
-    final_prompt = ""
+    # --- Construct Final Prompt ---
+    
+    # Updated System Instruction for Multi-file JSON output
     system_instruction = (
-        "You are Siteulation AI. Generate a SINGLE-FILE HTML app. "
-        "Include CSS in <style> and JS in <script>. "
-        "Do NOT use markdown. Return raw HTML only. "
-        "Do not include any explanations, only the code."
+        "You are Siteulation AI. You generate web applications. "
+        "You MUST return the code in a valid JSON format. "
+        "The JSON object must have a key 'files', which is an array of objects. "
+        "Each object must have 'name' (filename, e.g., 'index.html', 'style.css') and 'content' (the file code). "
+        "Always include an 'index.html' as the entry point. "
+        "If the user asks for a simple app, you can just return one file. "
+        "Do NOT use markdown fencing around the JSON. Return raw JSON."
     )
 
     if is_mobile:
         system_instruction += " IMPORTANT: The user is on a mobile device. Ensure the app is mobile-responsive, uses touch events if needed, and fits within the screen without overflow."
 
-    if remix_code:
-        final_prompt += f"""
-I want to Remix/Modify this existing HTML application code.
+    final_prompt = prompt
 
-EXISTING CODE:
+    if remix_code:
+        # Check if remix_code is likely JSON or string
+        is_json_remix = False
+        try:
+            json.loads(remix_code)
+            is_json_remix = True
+        except:
+            pass
+
+        final_prompt = f"""
+I want to Remix/Modify this existing application.
+
+EXISTING CODE ({'JSON' if is_json_remix else 'LEGACY STRING'}):
 {remix_code}
 
 USER REQUEST:
 {prompt}
+
+Return the updated project structure in the requested JSON format.
 """
-    else:
-        final_prompt += prompt
 
     if multiplayer_enabled:
         multiplayer_prompt = """
@@ -520,23 +535,20 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
 *   `socket.on('chat_message', (msg) => { ...appendMessageToChat(msg)... });`
 *   `socket.on('player_joined', (data) => { ... });`
 *   `socket.on('player_left', (data) => { ... });`
-
-**Note:** The server DOES NOT echo messages back to the sender. You must append your own messages/state updates to your local view immediately after sending.
 """
         final_prompt += multiplayer_prompt
         
-    final_prompt += "\nGenerate the updated single-file HTML app."
+    final_prompt += "\nGenerate the complete JSON structure."
 
     # --- Generation Logic ---
-    code = ""
+    raw_output = ""
     model_used = "gemini-3-flash-preview"
 
     try:
         if provider == 'openrouter':
             model_used = "openrouter-gemini-2"
-            # prepend system instruction to prompt for openrouter as we are using simple message structure
             openrouter_prompt = f"{system_instruction}\n\n{final_prompt}"
-            code = generate_with_openrouter(openrouter_prompt)
+            raw_output = generate_with_openrouter(openrouter_prompt)
         else:
             # Official API
             if not ai_client:
@@ -550,16 +562,46 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
                 contents=final_prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
-                    temperature=0.7
+                    temperature=0.7,
+                    response_mime_type="application/json"
                 )
             )
             if not response.text:
                 raise Exception("AI returned empty response")
-            code = response.text
+            raw_output = response.text
 
-        # Cleanup Code (Remove markdown fences if present)
-        code = code.replace("```html", "").replace("```", "")
-        if code.startswith("xml"): code = code[3:]
+        # Cleanup Code (Handle markdown fences if the AI ignores strict instructions)
+        cleaned_output = raw_output.strip()
+        if cleaned_output.startswith("```json"):
+            cleaned_output = cleaned_output[7:]
+        if cleaned_output.startswith("```"):
+            cleaned_output = cleaned_output[3:]
+        if cleaned_output.endswith("```"):
+            cleaned_output = cleaned_output[:-3]
+        
+        # Validate JSON
+        try:
+            # Ensure it's valid JSON
+            json_structure = json.loads(cleaned_output)
+            # Ensure it has 'files' array
+            if 'files' not in json_structure:
+                 # Attempt to fix if it just returned the array directly
+                 if isinstance(json_structure, list):
+                     json_structure = {"files": json_structure}
+                 else:
+                     raise Exception("Invalid JSON structure: Missing 'files' key")
+            
+            final_code_storage = json.dumps(json_structure)
+
+        except json.JSONDecodeError:
+            print("JSON Parsing Failed, falling back to raw string storage")
+            # Fallback: Store as a single file structure manually wrapped
+            fallback_struct = {
+                "files": [
+                    {"name": "index.html", "content": raw_output}
+                ]
+            }
+            final_code_storage = json.dumps(fallback_struct)
 
     except Exception as e:
         print(f"Generation Error ({provider}): {e}")
@@ -574,7 +616,7 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
             "name": name,
             "prompt": prompt,
             "model": model_used,
-            "code": code,
+            "code": final_code_storage, # Stores JSON string now
             "views": 0,
             "is_listed": False 
         }

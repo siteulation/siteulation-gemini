@@ -126,7 +126,7 @@ const CreateSite = () => {
                     required
                     rows=${8}
                     className="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-5 text-white placeholder-slate-600 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all resize-none text-lg leading-relaxed"
-                    placeholder=${remixData ? "Describe how you want to modify this cart..." : "Describe the application to simulate..."}
+                    placeholder=${remixData ? "Describe how you want to modify this cart..." : "Describe the application to simulate. Complex prompts will generate multiple files automatically."}
                   />
                   <div className="absolute bottom-4 right-4 text-xs text-slate-600 font-mono">
                     ${prompt.length} CHARS

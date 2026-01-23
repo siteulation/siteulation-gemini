@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock } from 'lucide-react';
-import { html } from '../utils.js';
+import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File } from 'lucide-react';
+import { html, bundleProject } from '../utils.js';
 
 const ViewSite = ({ user }) => {
   const { id } = useParams();
@@ -18,6 +18,9 @@ const ViewSite = ({ user }) => {
   
   // Code View State
   const [showCode, setShowCode] = useState(false);
+  const [files, setFiles] = useState([]); // Array of {name, content}
+  const [activeFileIndex, setActiveFileIndex] = useState(0);
+  const [previewCode, setPreviewCode] = useState('');
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -28,8 +31,28 @@ const ViewSite = ({ user }) => {
         const data = await api.request(`/api/carts/${id}`);
         setCart(data);
         setNewName(data.name || data.prompt);
+
+        // Process Code (Handle JSON vs Legacy String)
+        let parsedFiles = [];
+        try {
+            const json = JSON.parse(data.code);
+            if (json.files && Array.isArray(json.files)) {
+                parsedFiles = json.files;
+            } else {
+                throw new Error("Not structured JSON");
+            }
+        } catch (e) {
+            // Fallback for legacy single-string carts
+            parsedFiles = [{ name: 'index.html', content: data.code }];
+        }
         
-        // Increment view count asynchronously (don't await or block UI)
+        setFiles(parsedFiles);
+        
+        // Generate Bundled Preview
+        const bundled = bundleProject(parsedFiles);
+        setPreviewCode(bundled);
+        
+        // Increment view count asynchronously
         api.request(`/api/carts/${id}/view`, { method: 'POST' }).catch(err => {
             console.warn("Failed to count view", err);
         });
@@ -74,9 +97,9 @@ const ViewSite = ({ user }) => {
       // Navigate to create page with current code in state
       navigate('/create', { 
           state: { 
-              remixCode: cart.code,
+              remixCode: cart.code, // Pass the raw DB code (JSON or string)
               originalName: cart.name || cart.prompt,
-              isListed: cart.is_listed // Pass listing status to determine default name
+              isListed: cart.is_listed
           }
       });
   };
@@ -109,8 +132,9 @@ const ViewSite = ({ user }) => {
   };
   
   const handleCopyCode = () => {
-    if (cart && cart.code) {
-        navigator.clipboard.writeText(cart.code);
+    const content = files[activeFileIndex]?.content;
+    if (content) {
+        navigator.clipboard.writeText(content);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     }
@@ -142,6 +166,13 @@ const ViewSite = ({ user }) => {
   };
   
   const isOwner = user && user.id === cart.user_id;
+
+  const getFileIcon = (name) => {
+      if (name.endsWith('.html')) return html`<${Globe} size=${14} className="text-orange-400"/>`;
+      if (name.endsWith('.css')) return html`<${FileType} size=${14} className="text-blue-400"/>`;
+      if (name.endsWith('.js')) return html`<${FileCode} size=${14} className="text-yellow-400"/>`;
+      return html`<${File} size=${14} className="text-slate-400"/>`;
+  };
 
   return html`
     <div className="flex flex-col h-screen bg-slate-950 pt-16">
@@ -264,7 +295,7 @@ const ViewSite = ({ user }) => {
           style=${getViewportStyle()}
         >
           <iframe
-            srcDoc=${cart.code}
+            srcDoc=${previewCode}
             title=${`Site ${cart.id}`}
             className="w-full h-full border-0"
             sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin allow-pointer-lock"
@@ -275,11 +306,13 @@ const ViewSite = ({ user }) => {
       <!-- Code Viewer Modal -->
       ${showCode && html`
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-4xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+          <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-5xl h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
             <div className="flex items-center justify-between p-4 border-b border-white/5 bg-slate-800/50">
               <div className="flex items-center space-x-2">
                  <${Code} size=${16} className="text-primary-400"/>
                  <h3 className="text-white font-bold font-mono text-sm">Source Code</h3>
+                 <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">${files.length} Files</span>
               </div>
               <div className="flex items-center space-x-2">
                 <button 
@@ -298,8 +331,30 @@ const ViewSite = ({ user }) => {
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-auto p-4 bg-slate-950/50">
-              <pre className="text-xs font-mono text-slate-300 whitespace-pre-wrap font-thin leading-relaxed selection:bg-primary-500/30">${cart.code}</pre>
+            
+            <!-- Modal Body: File Explorer Layout -->
+            <div className="flex flex-1 overflow-hidden">
+                <!-- Sidebar -->
+                <div className="w-48 md:w-64 bg-slate-950 border-r border-white/5 flex flex-col overflow-y-auto">
+                    <div className="p-2 space-y-1">
+                        ${files.map((file, index) => html`
+                            <button 
+                                key=${index}
+                                onClick=${() => setActiveFileIndex(index)}
+                                className=${`w-full text-left px-3 py-2 rounded-lg text-sm font-mono flex items-center space-x-2 transition-colors ${activeFileIndex === index ? 'bg-primary-500/10 text-primary-300 border border-primary-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
+                            >
+                                ${getFileIcon(file.name)}
+                                <span className="truncate">${file.name}</span>
+                            </button>
+                        `)}
+                    </div>
+                </div>
+
+                <!-- Code Editor View -->
+                <div className="flex-1 overflow-auto p-4 bg-slate-900 relative">
+                  <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-slate-900 to-transparent h-4 z-10 pointer-events-none"></div>
+                  <pre className="text-xs font-mono text-slate-300 whitespace-pre-wrap font-thin leading-relaxed selection:bg-primary-500/30 font-fira-code">${files[activeFileIndex]?.content}</pre>
+                </div>
             </div>
           </div>
         </div>
