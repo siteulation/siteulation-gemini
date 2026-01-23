@@ -161,6 +161,16 @@ def on_state_update(data):
         # Broadcast to everyone else in the room
         emit('state_update', payload, room=room, include_self=False)
 
+@socketio.on('chat_message')
+def on_chat_message(data):
+    """
+    Relay chat messages specifically.
+    Client emits 'chat_message' with { 'room': '...', 'user': '...', 'text': '...' }
+    """
+    room = data.get('room')
+    if room:
+        emit('chat_message', data, room=room, include_self=False)
+
 # --- Global Error Handlers ---
 
 @app.errorhandler(Exception)
@@ -442,15 +452,28 @@ USER REQUEST:
         multiplayer_prompt = """
         
 *** IMPORTANT: MULTIPLAYER MODE ENABLED ***
-You MUST implement real-time multiplayer functionality.
-1. Include the Socket.IO client library: <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-2. Initialize the connection: `const socket = io({transports: ['websocket', 'polling']});`
-3. Generate a unique 'Room ID' (or ask the user to enter one) to separate different sessions.
-4. On startup, emit: `socket.emit('join', { room: myRoomId });`
-5. To sync data, emit: `socket.emit('state_update', { room: myRoomId, data: { ...yourStateObject... } });`
-6. Listen for updates: `socket.on('state_update', (data) => { ...updateLocalState(data)... });`
-7. Listen for players: `socket.on('player_joined', ...)`, `socket.on('player_left', ...)`
-8. Ensure you debounce rapid updates to avoid flooding.
+You MUST implement real-time multiplayer functionality using the provided WebSocket server.
+
+1.  **Include Socket.IO**: `<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>`
+2.  **Initialize**: `const socket = io({transports: ['websocket', 'polling']});`
+3.  **Rooms**: Generate a Room ID or let the user input one.
+4.  **Join**: `socket.emit('join', { room: myRoomId });`
+
+**Sending Data:**
+*   **State Updates** (Positions, Game Data): 
+    `socket.emit('state_update', { room: myRoomId, data: { ... } });`
+    *Server relays this to other players.*
+*   **Chat/Messages**: 
+    `socket.emit('chat_message', { room: myRoomId, username: 'User', text: 'Hello' });`
+    *Server relays this to other players.*
+
+**Receiving Data:**
+*   `socket.on('state_update', (data) => { ...updateGameState(data)... });`
+*   `socket.on('chat_message', (msg) => { ...appendMessageToChat(msg)... });`
+*   `socket.on('player_joined', (data) => { ... });`
+*   `socket.on('player_left', (data) => { ... });`
+
+**Note:** The server DOES NOT echo messages back to the sender. You must append your own messages/state updates to your local view immediately after sending.
 """
         final_prompt += multiplayer_prompt
         

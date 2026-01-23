@@ -151,7 +151,7 @@ const CreateSite = () => {
 
               <button
                 type="submit"
-                disabled=${loading || !!error}
+                disabled=${loading}
                 className="w-full group relative overflow-hidden bg-white text-slate-950 font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-primary-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-primary-400 to-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity"></div>

@@ -43,20 +43,42 @@ export const api = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    try {
-      const response = await fetch(`${BACKEND_URL}${endpoint}`, {
-        ...options,
-        headers,
-      });
+    const MAX_RETRIES = 2;
+    let attempt = 0;
 
-      if (response.status === 401) {
-        localStorage.removeItem(TOKEN_KEY);
-      }
+    while (true) {
+        try {
+            const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+                ...options,
+                headers,
+            });
 
-      return handleResponse(response);
-    } catch (e) {
-      console.error("API Call Failed:", e);
-      throw e; 
+            // If 502 Bad Gateway, 503 Service Unavailable, or 504 Gateway Timeout
+            // Retry a few times to handle transient server glitches
+            if ([502, 503, 504].includes(response.status) && attempt < MAX_RETRIES) {
+                attempt++;
+                console.log(`Server error ${response.status}, retrying (attempt ${attempt})...`);
+                await new Promise(r => setTimeout(r, 1500)); // Wait 1.5s
+                continue;
+            }
+
+            if (response.status === 401) {
+                localStorage.removeItem(TOKEN_KEY);
+            }
+
+            return await handleResponse(response);
+
+        } catch (e) {
+            // Network errors (fetch throws)
+             if (attempt < MAX_RETRIES) {
+                attempt++;
+                console.log(`Network error, retrying (attempt ${attempt})...`);
+                await new Promise(r => setTimeout(r, 1500));
+                continue;
+            }
+            console.error("API Call Failed:", e);
+            throw e; 
+        }
     }
   },
 
