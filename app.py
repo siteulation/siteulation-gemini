@@ -466,6 +466,7 @@ def generate_cart():
     remix_code = data.get('remix_code') 
     multiplayer_enabled = data.get('multiplayer', False)
     provider = data.get('provider', 'openrouter') # 'openrouter' or 'official'
+    is_mobile = data.get('is_mobile', False)
     
     if not prompt:
         return jsonify({"error": "Prompt required"}), 400
@@ -478,6 +479,9 @@ def generate_cart():
         "Do NOT use markdown. Return raw HTML only. "
         "Do not include any explanations, only the code."
     )
+
+    if is_mobile:
+        system_instruction += " IMPORTANT: The user is on a mobile device. Ensure the app is mobile-responsive, uses touch events if needed, and fits within the screen without overflow."
 
     if remix_code:
         final_prompt += f"""

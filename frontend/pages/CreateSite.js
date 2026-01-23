@@ -41,6 +41,8 @@ const CreateSite = () => {
     setLoading(true);
     setError(null);
 
+    const isMobile = window.innerWidth < 768;
+
     try {
         // We now just send the provider preference to the backend.
         const payload = {
@@ -49,7 +51,8 @@ const CreateSite = () => {
             model,
             multiplayer: isMultiplayer,
             remix_code: remixData ? remixData.code : null,
-            provider: provider
+            provider: provider,
+            is_mobile: isMobile
         };
 
         const data = await api.request('/api/generate', {
