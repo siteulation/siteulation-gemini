@@ -8,9 +8,9 @@ import { html } from '../utils.js';
 const CreateSite = () => {
   const [prompt, setPrompt] = useState('');
   const [name, setName] = useState('');
-  const [model, setModel] = useState(ModelType.GEMINI_3);
+  const [model, setModel] = useState(ModelType.GEMINI_2_FREE);
   const [isMultiplayer, setIsMultiplayer] = useState(false);
-  const [provider, setProvider] = useState('official'); 
+  const [provider, setProvider] = useState('openrouter'); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -184,20 +184,20 @@ const CreateSite = () => {
               
               <div className="space-y-3">
                 
-                <!-- Gemini 3.0 (Paid) -->
+                <!-- Gemini 3.0 (Paid) - UNAVAILABLE -->
                 <button
                     type="button"
-                    onClick=${() => selectModel(ModelType.GEMINI_3, 'official')}
-                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${model === ModelType.GEMINI_3 ? 'bg-slate-800 border-purple-500 ring-1 ring-purple-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
+                    disabled=${true}
+                    className="w-full p-4 rounded-xl border border-white/5 text-left transition-all relative overflow-hidden group bg-slate-900/50 opacity-60 cursor-not-allowed"
                 >
                     <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-2">
-                             <${Zap} className=${model === ModelType.GEMINI_3 ? 'text-purple-400' : 'text-slate-500'} size=${20} />
-                             <span className="font-bold text-white text-sm">Gemini 3.0 Flash</span>
+                             <${Zap} className="text-slate-500" size=${20} />
+                             <span className="font-bold text-slate-400 text-sm">Gemini 3.0 Flash</span>
                         </div>
-                        <span className="text-[10px] bg-purple-500/20 text-purple-200 px-2 py-0.5 rounded-full font-bold border border-purple-500/30">1 CREDIT</span>
+                        <span className="text-[10px] bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full font-bold border border-slate-600">UNAVAILABLE</span>
                     </div>
-                    <div className="text-xs text-slate-400 mt-1 pl-7">Official API. Reasoning engine. High Quality.</div>
+                    <div className="text-xs text-slate-500 mt-1 pl-7">Official API. Reasoning engine. Temporarily offline.</div>
                 </button>
 
                 <!-- Gemini 2.0 Free -->
