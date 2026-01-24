@@ -5,6 +5,9 @@ import traceback
 import json
 import uuid
 import time
+import zipfile
+import io
+import random
 from datetime import datetime, date
 from flask import Flask, request, jsonify, send_from_directory, send_file, Response
 from flask_cors import CORS
@@ -392,6 +395,106 @@ def admin_ban_user():
     return jsonify({"success": True}), 200
 
 # --- Data Routes ---
+
+@app.route('/api/randomproject', methods=['GET'])
+def random_project():
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+
+    # 1. Get Count of listed carts
+    count_url = f"{SUPABASE_URL}/rest/v1/carts?is_listed=eq.true"
+    # Using HEAD to just get headers, pass Prefer: count=exact
+    headers = get_db_headers()
+    headers['Prefer'] = 'count=exact'
+    
+    try:
+        head_resp = requests.head(count_url, headers=headers)
+        content_range = head_resp.headers.get('Content-Range')
+        
+        total = 0
+        if content_range:
+            # Content-Range: 0-24/25 OR */25
+            try:
+                total = int(content_range.split('/')[-1])
+            except:
+                total = 0
+                
+        if total == 0:
+            return jsonify({"error": "No public projects found"}), 404
+
+        # 2. Generate Random Offset
+        random_offset = random.randint(0, total - 1)
+        
+        # 3. Fetch One at Offset
+        fetch_url = f"{SUPABASE_URL}/rest/v1/carts?select=id&is_listed=eq.true&limit=1&offset={random_offset}"
+        # Use standard headers without count preference for GET
+        resp = requests.get(fetch_url, headers=get_db_headers())
+        
+        data = resp.json()
+        if not data:
+            return jsonify({"error": "Failed to fetch random cart"}), 500
+            
+        cart_id = data[0]['id']
+        project_url = f"https://siteulation.onrender.com/site/{cart_id}"
+        
+        return jsonify({
+            "id": cart_id,
+            "url": project_url
+        })
+    except Exception as e:
+        print(f"Random Project Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/project/<id>', methods=['GET'])
+def download_project_zip(id):
+    if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
+
+    # Fetch cart
+    url = f"{SUPABASE_URL}/rest/v1/carts?select=name,code&id=eq.{id}"
+    try:
+        resp = requests.get(url, headers=get_db_headers())
+        data = resp.json()
+        
+        if not data:
+            return jsonify({"error": "Cart not found"}), 404
+        
+        cart = data[0]
+        raw_code = cart.get('code', '')
+        name = cart.get('name', 'project')
+        # Sanitize filename
+        safe_name = "".join([c for c in name if c.isalnum() or c in (' ', '-', '_')]).strip().replace(' ', '_')
+        if not safe_name:
+            safe_name = f"project-{id}"
+
+        # Prepare Zip in Memory
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            try:
+                # Attempt to parse JSON structure
+                json_structure = json.loads(raw_code)
+                if 'files' in json_structure and isinstance(json_structure['files'], list):
+                    for file_obj in json_structure['files']:
+                        filename = file_obj.get('name', 'unknown.txt')
+                        content = file_obj.get('content', '')
+                        zf.writestr(filename, content)
+                else:
+                    # JSON but not the 'files' structure we expect? Or maybe single file JSON?
+                    # Fallback: treat whole thing as index.html or if it's not our format
+                    zf.writestr('index.html', raw_code)
+            except json.JSONDecodeError:
+                # Legacy raw string format (not JSON)
+                zf.writestr('index.html', raw_code)
+                
+        memory_file.seek(0)
+        
+        return send_file(
+            memory_file,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=f'{safe_name}.zip'
+        )
+    except Exception as e:
+        print(f"Zip Download Error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/carts', methods=['GET'])
 def get_carts():
