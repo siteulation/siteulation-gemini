@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ModelType } from '../types.js';
-import { Sparkles, AlertTriangle, Zap, Cpu, GitFork, Users, Globe, Cloud, Server, BrainCircuit } from 'lucide-react';
+import { Sparkles, AlertTriangle, Zap, Cpu, GitFork, Users, Globe, Cloud, Server, BrainCircuit, Terminal } from 'lucide-react';
 import { html } from '../utils.js';
 
 const CreateSite = () => {
@@ -75,171 +75,162 @@ const CreateSite = () => {
   };
 
   return html`
-    <div className="min-h-screen pt-24 pb-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            ${remixData ? 'Remix Cart' : 'Create Cart'}
-          </h1>
-          <p className="text-slate-400">
-            ${remixData ? `Modifying existing code from "${remixData.originalName}".` : 'Configure parameters for your new digital environment.'}
-          </p>
+    <div className="min-h-screen pt-24 pb-12 px-4 bg-[#111] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]">
+      <div className="max-w-6xl mx-auto border border-slate-800 bg-slate-950/80 shadow-2xl relative">
+        
+        <!-- Blueprint Header -->
+        <div className="bg-slate-900 border-b border-slate-700 p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+                <div className="p-2 border border-slate-600 bg-slate-800"><${Cpu} size=${20} className="text-blue-400"/></div>
+                <div>
+                    <h1 className="text-sm font-bold text-white uppercase tracking-[0.2em] leading-none">
+                        ${remixData ? 'Modification_Module' : 'Cartridge_Fabricator'}
+                    </h1>
+                    <span className="text-[10px] text-slate-500 font-mono">ID: {Math.random().toString(36).substr(2, 6).toUpperCase()}</span>
+                </div>
+            </div>
+            <div className="hidden md:block text-right">
+                <div className="text-[10px] text-slate-500 uppercase">System Status</div>
+                <div className="text-xs text-green-500 font-mono font-bold animate-pulse">ONLINE</div>
+            </div>
         </div>
 
-        ${error && html`
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center space-x-3 text-red-200">
-            <${AlertTriangle} size=${20} />
-            <span>${error}</span>
-          </div>
-        `}
-        
-        ${remixData && html`
-           <div className="mb-6 p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-center space-x-3 text-purple-200">
-             <${GitFork} size=${20} />
-             <span>Remix Mode Active: Your prompt will be applied to the existing codebase.</span>
-             <button onClick=${() => { setRemixData(null); setName(''); }} className="ml-auto text-xs underline hover:text-white">Cancel Remix</button>
-           </div>
-        `}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <!-- Form Section -->
-          <div className="lg:col-span-2">
-            <form onSubmit=${handleSubmit} className="bg-slate-900/50 border border-white/5 rounded-2xl p-6 backdrop-blur-sm space-y-6">
-              
-              <div>
-                <label className="block text-sm font-mono text-slate-400 mb-3 uppercase tracking-wider">
-                  Project Name
-                </label>
-                <input
-                    type="text"
-                    value=${name}
-                    onChange=${(e) => setName(e.target.value)}
-                    className="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-4 text-white placeholder-slate-600 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
-                    placeholder="e.g., Cyberpunk Dashboard"
-                    required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-mono text-slate-400 mb-3 uppercase tracking-wider">
-                  Prompt
-                </label>
-                <div className="relative">
-                  <textarea
-                    value=${prompt}
-                    onChange=${(e) => setPrompt(e.target.value)}
-                    required
-                    rows=${8}
-                    className="w-full bg-slate-950/50 border border-slate-700 rounded-xl p-5 text-white placeholder-slate-600 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all resize-none text-lg leading-relaxed"
-                    placeholder=${remixData ? "Describe how you want to modify this cart..." : "Describe the application to simulate. Complex prompts will generate multiple files automatically."}
-                  />
-                  <div className="absolute bottom-4 right-4 text-xs text-slate-600 font-mono">
-                    ${prompt.length} CHARS
-                  </div>
+        <div className="p-6 md:p-10 grid grid-cols-1 lg:grid-cols-3 gap-10">
+          
+          <!-- LEFT COLUMN: Inputs -->
+          <div className="lg:col-span-2 space-y-8">
+            ${error && html`
+                <div className="p-3 bg-red-900/20 border-l-2 border-red-500 text-red-400 text-xs font-mono">
+                    ERROR: ${error}
                 </div>
-              </div>
+            `}
+            ${remixData && html`
+                <div className="p-3 bg-purple-900/20 border-l-2 border-purple-500 text-purple-300 text-xs font-mono flex items-center justify-between">
+                    <span>> REMIXING SOURCE: "${remixData.originalName}"</span>
+                    <button onClick=${() => { setRemixData(null); setName(''); }} className="underline hover:text-white">ABORT</button>
+                </div>
+            `}
 
-              <div className="flex items-center space-x-3 p-4 bg-slate-800/50 rounded-xl border border-white/5">
-                <button
-                    type="button"
-                    onClick=${() => setIsMultiplayer(!isMultiplayer)}
-                    className=${`w-12 h-6 rounded-full transition-colors relative ${isMultiplayer ? 'bg-primary-500' : 'bg-slate-700'}`}
-                >
-                    <div className=${`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${isMultiplayer ? 'left-7' : 'left-1'}`}></div>
-                </button>
+            <form onSubmit=${handleSubmit} className="space-y-6">
+                <!-- Name Field -->
+                <div className="relative border-b border-slate-700 pb-2">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Project Designation</label>
+                    <input
+                        type="text"
+                        value=${name}
+                        onChange=${(e) => setName(e.target.value)}
+                        className="w-full bg-transparent text-xl md:text-2xl font-mono text-white placeholder-slate-700 outline-none uppercase"
+                        placeholder="ENTER_NAME..."
+                        required
+                    />
+                    <div className="absolute right-0 bottom-2 text-slate-700"><${Terminal} size=${16} /></div>
+                </div>
+
+                <!-- Prompt Field -->
                 <div>
-                    <div className="flex items-center space-x-2">
-                        <${Users} size=${16} className=${isMultiplayer ? 'text-primary-400' : 'text-slate-500'} />
-                        <span className="font-bold text-sm text-white">Enable Real-Time Multiplayer</span>
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Specifications (Prompt)</label>
+                    <div className="relative border border-slate-700 bg-[#0a0a0a] p-1">
+                        <!-- Ruler markers -->
+                        <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-slate-500"></div>
+                        <div className="absolute top-0 right-0 w-2 h-2 border-r border-t border-slate-500"></div>
+                        <div className="absolute bottom-0 left-0 w-2 h-2 border-l border-b border-slate-500"></div>
+                        <div className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-slate-500"></div>
+                        
+                        <textarea
+                            value=${prompt}
+                            onChange=${(e) => setPrompt(e.target.value)}
+                            required
+                            rows=${10}
+                            className="w-full bg-transparent p-4 text-slate-300 placeholder-slate-700 font-mono text-sm outline-none resize-none leading-relaxed"
+                            placeholder=${remixData ? "Define modification parameters..." : "Describe the digital environment to simulate. Detailed inputs yield higher fidelity results."}
+                        ></textarea>
+                        
+                        <div className="absolute bottom-2 right-2 text-[10px] text-slate-600 font-mono">
+                            BYTES: ${prompt.length}
+                        </div>
                     </div>
-                    <p className="text-xs text-slate-400 mt-0.5">Allow users to interact via shared sockets.</p>
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled=${loading}
-                className="w-full group relative overflow-hidden bg-white text-slate-950 font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-primary-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-primary-400 to-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="relative flex items-center justify-center space-x-2">
-                  ${loading ? html`
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-950"></div>
-                    <span>Processing...</span>
-                  ` : html`
-                    <${Sparkles} size=${20} />
-                    <span>${remixData ? 'Generate Remix' : 'Generate'}</span>
-                  `}
+                <!-- Options -->
+                <div className="flex items-center space-x-4">
+                     <button
+                        type="button"
+                        onClick=${() => setIsMultiplayer(!isMultiplayer)}
+                        className=${`flex items-center space-x-3 px-4 py-2 border transition-all ${isMultiplayer ? 'border-primary-500 bg-primary-900/20 text-primary-400' : 'border-slate-700 bg-slate-900 text-slate-500 hover:border-slate-500'}`}
+                    >
+                        <div className=${`w-3 h-3 border ${isMultiplayer ? 'bg-primary-500 border-primary-400' : 'bg-transparent border-slate-500'}`}></div>
+                        <div className="text-xs font-bold uppercase tracking-wider">Netplay (Socket.IO)</div>
+                    </button>
                 </div>
-              </button>
+
+                <!-- Fabricate Button -->
+                <button
+                    type="submit"
+                    disabled=${loading}
+                    className="w-full group relative overflow-hidden bg-white text-black font-black uppercase tracking-widest py-5 hover:bg-slate-200 transition-all border-b-4 border-slate-400 active:border-b-0 active:translate-y-[4px] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    <div className="relative flex items-center justify-center space-x-3">
+                         ${loading ? html`
+                            <div className="animate-spin w-4 h-4 border-2 border-black border-t-transparent"></div>
+                            <span>Compiling Assets...</span>
+                         ` : html`
+                            <${Sparkles} size=${18} />
+                            <span>Initiate Fabrication</span>
+                         `}
+                    </div>
+                </button>
             </form>
           </div>
 
-          <!-- Settings Section -->
+          <!-- RIGHT COLUMN: Specs -->
           <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-mono text-slate-400 mb-3 uppercase tracking-wider">
-                Model Selection
-              </label>
-              
-              <div className="space-y-3">
+             <div className="border border-slate-700 bg-slate-900/50 p-4">
+                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">Processing Core</h3>
                 
-                <!-- Gemini 3.0 (Paid) - UNAVAILABLE -->
-                <button
-                    type="button"
-                    disabled=${true}
-                    className="w-full p-4 rounded-xl border border-white/5 text-left transition-all relative overflow-hidden group bg-slate-900/50 opacity-60 cursor-not-allowed"
-                >
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center space-x-2">
-                             <${Zap} className="text-slate-500" size=${20} />
-                             <span className="font-bold text-slate-400 text-sm">Gemini 3.0 Flash</span>
+                <div className="space-y-3">
+                    <button
+                        type="button"
+                        onClick=${() => selectModel(ModelType.GEMINI_2_FREE, 'openrouter')}
+                        className=${`w-full p-3 border text-left transition-all relative group flex items-start space-x-3 ${model === ModelType.GEMINI_2_FREE ? 'bg-blue-900/20 border-blue-500' : 'bg-transparent border-slate-700 hover:border-slate-500'}`}
+                    >
+                        <${Cloud} size=${16} className=${model === ModelType.GEMINI_2_FREE ? 'text-blue-400' : 'text-slate-600'} />
+                        <div>
+                            <div className="text-xs font-bold text-white uppercase">Gemini 2.0 Flash</div>
+                            <div className="text-[10px] text-slate-500 mt-1">Standard Issue. High Speed.</div>
                         </div>
-                        <span className="text-[10px] bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full font-bold border border-slate-600">UNAVAILABLE</span>
-                    </div>
-                    <div className="text-xs text-slate-500 mt-1 pl-7">Official API. Reasoning engine. Temporarily offline.</div>
-                </button>
+                        <div className="absolute top-2 right-2 text-[8px] bg-green-900 text-green-400 px-1 border border-green-700">FREE</div>
+                    </button>
 
-                <!-- Gemini 2.0 Free -->
-                <button
-                    type="button"
-                    onClick=${() => selectModel(ModelType.GEMINI_2_FREE, 'openrouter')}
-                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${model === ModelType.GEMINI_2_FREE ? 'bg-slate-800 border-blue-500 ring-1 ring-blue-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
-                >
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center space-x-2">
-                             <${Cloud} className=${model === ModelType.GEMINI_2_FREE ? 'text-blue-400' : 'text-slate-500'} size=${20} />
-                             <span className="font-bold text-white text-sm">Gemini 2.0 Flash</span>
+                    <button
+                        type="button"
+                        onClick=${() => selectModel(ModelType.DEEPSEEK_FREE, 'openrouter')}
+                        className=${`w-full p-3 border text-left transition-all relative group flex items-start space-x-3 ${model === ModelType.DEEPSEEK_FREE ? 'bg-cyan-900/20 border-cyan-500' : 'bg-transparent border-slate-700 hover:border-slate-500'}`}
+                    >
+                        <${BrainCircuit} size=${16} className=${model === ModelType.DEEPSEEK_FREE ? 'text-cyan-400' : 'text-slate-600'} />
+                        <div>
+                            <div className="text-xs font-bold text-white uppercase">DeepSeek R1</div>
+                            <div className="text-[10px] text-slate-500 mt-1">Logic Optimized. Distilled.</div>
                         </div>
-                        <span className="text-[10px] bg-green-500/20 text-green-200 px-2 py-0.5 rounded-full font-bold border border-green-500/30">FREE</span>
-                    </div>
-                    <div className="text-xs text-slate-400 mt-1 pl-7">OpenRouter. Fast experimental build.</div>
-                </button>
-                
-                <!-- DeepSeek Free -->
-                <button
-                    type="button"
-                    onClick=${() => selectModel(ModelType.DEEPSEEK_FREE, 'openrouter')}
-                    className=${`w-full p-4 rounded-xl border text-left transition-all relative overflow-hidden group ${model === ModelType.DEEPSEEK_FREE ? 'bg-slate-800 border-cyan-500 ring-1 ring-cyan-500' : 'bg-slate-900 border-white/10 hover:border-white/20'}`}
-                >
-                    <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center space-x-2">
-                             <${BrainCircuit} className=${model === ModelType.DEEPSEEK_FREE ? 'text-cyan-400' : 'text-slate-500'} size=${20} />
-                             <span className="font-bold text-white text-sm">DeepSeek R1</span>
+                        <div className="absolute top-2 right-2 text-[8px] bg-green-900 text-green-400 px-1 border border-green-700">FREE</div>
+                    </button>
+                    
+                    <div className="w-full p-3 border border-slate-800 bg-slate-900 opacity-50 flex items-start space-x-3 cursor-not-allowed">
+                        <${Zap} size=${16} className="text-slate-700" />
+                         <div>
+                            <div className="text-xs font-bold text-slate-500 uppercase">Gemini 3.0</div>
+                            <div className="text-[10px] text-slate-600 mt-1">Premium Core. Offline.</div>
                         </div>
-                        <span className="text-[10px] bg-green-500/20 text-green-200 px-2 py-0.5 rounded-full font-bold border border-green-500/30">FREE</span>
                     </div>
-                    <div className="text-xs text-slate-400 mt-1 pl-7">OpenRouter. Distilled Llama 70B.</div>
-                </button>
+                </div>
+             </div>
 
-              </div>
-            </div>
-            
-             <div className="p-4 bg-slate-800/30 rounded-lg border border-white/5 text-xs text-slate-400">
-                <span className="font-bold text-slate-300">Note:</span> Free models are provided via OpenRouter and may have rate limits or lower availability. Credits reset daily.
-            </div>
-
+             <div className="bg-slate-900 border border-slate-800 p-4 text-[10px] font-mono text-slate-500 leading-relaxed">
+                > NOTE: Free tier models are routed via OpenRouter.<br/>
+                > Latency may vary based on network congestion.<br/>
+                > Credits required for premium tier.
+             </div>
           </div>
+
         </div>
       </div>
     </div>

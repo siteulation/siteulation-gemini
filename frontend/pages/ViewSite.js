@@ -95,10 +95,9 @@ const ViewSite = ({ user }) => {
   };
   
   const handleRemix = () => {
-      // Navigate to create page with current code in state
       navigate('/create', { 
           state: { 
-              remixCode: cart.code, // Pass the raw DB code (JSON or string)
+              remixCode: cart.code,
               originalName: cart.name || cart.prompt,
               isListed: cart.is_listed
           }
@@ -154,7 +153,6 @@ const ViewSite = ({ user }) => {
   };
 
   const handleEditorChange = (value) => {
-    // Optional: Allow editing in memory
     const newFiles = [...files];
     newFiles[activeFileIndex].content = value;
     setFiles(newFiles);
@@ -195,62 +193,59 @@ const ViewSite = ({ user }) => {
   };
 
   return html`
-    <div className="flex flex-col h-screen bg-slate-950 pt-16">
+    <div className="flex flex-col h-screen bg-[#050505] pt-16">
       <!-- Toolbar -->
-      <div className="bg-slate-900 border-b border-white/5 px-4 h-14 flex items-center justify-between shrink-0">
+      <div className="bg-[#111] border-b border-white/10 px-4 h-14 flex items-center justify-between shrink-0 shadow-lg">
         <div className="flex items-center space-x-4 flex-1 mr-4 overflow-hidden">
-          <${Link} to="/" className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition-colors shrink-0">
+          <${Link} to="/" className="p-2 hover:bg-white/5 rounded-none border border-transparent hover:border-slate-700 text-slate-400 hover:text-white transition-all shrink-0">
             <${ArrowLeft} size=${20} />
           <//>
           
           <div className="flex items-center space-x-2 overflow-hidden w-full">
             ${isEditingName ? html`
-                <div className="flex items-center space-x-1 bg-slate-800 rounded p-0.5 w-full max-w-sm">
+                <div className="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-0.5 w-full max-w-sm">
                     <input 
                         type="text" 
                         value=${newName}
                         onChange=${(e) => setNewName(e.target.value)}
-                        className="bg-transparent border-none focus:ring-0 text-white text-sm px-2 py-1 w-full"
+                        className="bg-transparent border-none focus:ring-0 text-white text-sm px-2 py-1 w-full font-mono"
                         autoFocus
                     />
-                    <button onClick=${handleRename} className="p-1 text-green-400 hover:bg-white/10 rounded"><${Check} size=${14} /></button>
-                    <button onClick=${() => setIsEditingName(false)} className="p-1 text-red-400 hover:bg-white/10 rounded"><${X} size=${14} /></button>
+                    <button onClick=${handleRename} className="p-1 text-green-400 hover:bg-white/10"><${Check} size=${14} /></button>
+                    <button onClick=${() => setIsEditingName(false)} className="p-1 text-red-400 hover:bg-white/10"><${X} size=${14} /></button>
                 </div>
             ` : html`
-                <h1 className="text-white font-bold text-sm truncate max-w-[200px] md:max-w-md" title=${cart.name || cart.prompt}>
+                <h1 className="text-slate-200 font-bold text-sm truncate max-w-[200px] md:max-w-md font-mono uppercase tracking-wide" title=${cart.name || cart.prompt}>
                     ${cart.name || cart.prompt}
                 </h1>
                 ${isOwner && html`
-                    <button onClick=${() => setIsEditingName(true)} className="text-slate-500 hover:text-primary-400 transition-colors p-1">
+                    <button onClick=${() => setIsEditingName(true)} className="text-slate-600 hover:text-white transition-colors p-1">
                         <${Pencil} size=${12} />
                     </button>
                 `}
                 ${!cart.is_listed && html`
-                    <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded ml-2 shrink-0 border border-slate-700">UNLISTED</span>
-                `}
-                ${cart.username === 'homelessman' && html`
-                  <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider ml-1 shrink-0">ADMIN CREATION</span>
+                    <span className="text-[9px] bg-red-900/20 text-red-400 px-1.5 py-0.5 border border-red-900 ml-2 shrink-0">PRIVATE</span>
                 `}
             `}
           </div>
         </div>
 
-        <div className="flex items-center space-x-1 bg-slate-800/50 rounded-lg p-1 border border-white/5 shrink-0 hidden md:flex">
+        <div className="flex items-center space-x-0.5 bg-black rounded p-0.5 border border-slate-800 shrink-0 hidden md:flex">
           <button
             onClick=${() => setViewport('desktop')}
-            className=${`p-1.5 rounded ${viewport === 'desktop' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+            className=${`p-1.5 ${viewport === 'desktop' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:text-slate-400'}`}
           >
             <${Monitor} size=${16} />
           </button>
           <button
             onClick=${() => setViewport('tablet')}
-            className=${`p-1.5 rounded ${viewport === 'tablet' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+            className=${`p-1.5 ${viewport === 'tablet' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:text-slate-400'}`}
           >
             <${Tablet} size=${16} />
           </button>
           <button
             onClick=${() => setViewport('mobile')}
-            className=${`p-1.5 rounded ${viewport === 'mobile' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
+            className=${`p-1.5 ${viewport === 'mobile' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:text-slate-400'}`}
           >
             <${Smartphone} size=${16} />
           </button>
@@ -260,21 +255,20 @@ const ViewSite = ({ user }) => {
            ${user && html`
              <button 
                 onClick=${handleRemix}
-                className="flex items-center space-x-1 px-3 py-1.5 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 border border-purple-500/20 rounded-lg text-xs font-bold transition-all"
+                className="flex items-center space-x-1 px-3 py-1.5 bg-purple-900/20 text-purple-400 hover:bg-purple-900/40 border border-purple-800 rounded-sm text-xs font-bold transition-all uppercase"
              >
                 <${GitFork} size=${14} />
-                <span>Remix</span>
+                <span>Fork</span>
              </button>
            `}
 
             ${isOwner && html`
                 <button
                     onClick=${toggleListed}
-                    className=${`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${cart.is_listed ? 'bg-green-500/10 text-green-400 border-green-500/20 hover:bg-green-500/20' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'}`}
-                    title=${cart.is_listed ? "Listed on public feed" : "Hidden from public feed"}
+                    className=${`flex items-center space-x-1 px-3 py-1.5 rounded-sm text-xs font-bold transition-all border uppercase ${cart.is_listed ? 'bg-green-900/20 text-green-400 border-green-800 hover:bg-green-900/30' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}
                 >
                     ${cart.is_listed ? html`<${Globe} size=${14} />` : html`<${Lock} size=${14} />`}
-                    <span>${cart.is_listed ? 'Listed' : 'Release'}</span>
+                    <span>${cart.is_listed ? 'Public' : 'Private'}</span>
                 </button>
             `}
 
@@ -283,24 +277,15 @@ const ViewSite = ({ user }) => {
                 <button 
                   onClick=${handleAdminDelete} 
                   disabled=${adminActionLoading}
-                  className="p-2 text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                  title="Delete Cart"
+                  className="p-2 text-red-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
                 >
                   <${Trash2} size=${18} />
-                </button>
-                <button 
-                  onClick=${handleAdminBan}
-                  disabled=${adminActionLoading} 
-                  className="p-2 text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                  title="Ban User"
-                >
-                  <${ShieldAlert} size=${18} />
                 </button>
              </div>
            `}
            <button 
                 onClick=${() => setShowCode(true)}
-                className="p-2 text-slate-400 hover:text-white transition-colors" 
+                className="p-2 text-slate-500 hover:text-white transition-colors" 
                 title="View Source"
             >
              <${Code} size=${18} />
@@ -309,9 +294,9 @@ const ViewSite = ({ user }) => {
       </div>
 
       <!-- Canvas -->
-      <div className="flex-1 overflow-hidden bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-slate-925 flex justify-center items-center p-4 md:p-8">
+      <div className="flex-1 overflow-hidden bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-[#080808] flex justify-center items-center p-4 md:p-8">
         <div 
-          className="bg-white h-full transition-all duration-500 shadow-2xl overflow-hidden rounded-lg ring-1 ring-white/10 relative"
+          className="bg-white h-full transition-all duration-500 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden border-4 border-[#222] relative"
           style=${getViewportStyle()}
         >
           <iframe
@@ -325,43 +310,32 @@ const ViewSite = ({ user }) => {
 
       <!-- Code Viewer Modal -->
       ${showCode && html`
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-5xl h-[80vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-[#111] border border-slate-800 rounded-none w-full max-w-6xl h-[85vh] flex flex-col shadow-2xl overflow-hidden font-mono">
             <!-- Modal Header -->
-            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-slate-800/50">
+            <div className="flex items-center justify-between p-3 border-b border-slate-800 bg-[#151515]">
               <div className="flex items-center space-x-2">
-                 <${Code} size=${16} className="text-primary-400"/>
-                 <h3 className="text-white font-bold font-mono text-sm">Source Code</h3>
-                 <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">${files.length} Files</span>
+                 <div className="w-3 h-3 bg-slate-500 rounded-full"></div>
+                 <h3 className="text-slate-300 font-bold text-xs uppercase tracking-widest">Source_Inspector</h3>
               </div>
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick=${handleCopyCode}
-                  className="flex items-center space-x-2 px-3 py-1.5 bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 rounded-lg text-xs font-bold transition-colors"
-                >
-                  ${copied ? html`<${Check} size=${14} />` : html`<${Copy} size=${14} />`}
-                  <span>${copied ? 'Copied' : 'Copy'}</span>
-                </button>
-                <div className="w-px h-6 bg-white/10 mx-1"></div>
-                <button 
-                    onClick=${() => setShowCode(false)} 
-                    className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white transition-colors"
-                >
-                  <${X} size=${20} />
-                </button>
-              </div>
+              <button 
+                  onClick=${() => setShowCode(false)} 
+                  className="text-slate-500 hover:text-white transition-colors"
+              >
+                <${X} size=${20} />
+              </button>
             </div>
             
-            <!-- Modal Body: File Explorer Layout -->
+            <!-- Modal Body -->
             <div className="flex flex-1 overflow-hidden">
                 <!-- Sidebar -->
-                <div className="w-48 md:w-64 bg-slate-950 border-r border-white/5 flex flex-col overflow-y-auto">
-                    <div className="p-2 space-y-1">
+                <div className="w-48 md:w-64 bg-[#0a0a0a] border-r border-slate-800 flex flex-col overflow-y-auto">
+                    <div className="p-0">
                         ${files.map((file, index) => html`
                             <button 
                                 key=${index}
                                 onClick=${() => setActiveFileIndex(index)}
-                                className=${`w-full text-left px-3 py-2 rounded-lg text-sm font-mono flex items-center space-x-2 transition-colors ${activeFileIndex === index ? 'bg-primary-500/10 text-primary-300 border border-primary-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
+                                className=${`w-full text-left px-4 py-3 text-xs border-b border-slate-800/50 flex items-center space-x-2 transition-colors ${activeFileIndex === index ? 'bg-slate-800 text-white border-l-4 border-l-primary-500' : 'text-slate-500 hover:bg-slate-900 hover:text-slate-300'}`}
                             >
                                 ${getFileIcon(file.name)}
                                 <span className="truncate">${file.name}</span>
@@ -370,7 +344,7 @@ const ViewSite = ({ user }) => {
                     </div>
                 </div>
 
-                <!-- Code Editor View (Monaco) -->
+                <!-- Editor -->
                 <div className="flex-1 overflow-hidden bg-[#1e1e1e]">
                   <${Editor}
                      height="100%"
@@ -381,17 +355,11 @@ const ViewSite = ({ user }) => {
                      options=${{
                          minimap: { enabled: false },
                          fontSize: 13,
-                         readOnly: false, // Allow local editing for experimentation
+                         readOnly: false,
                          fontFamily: "'Fira Code', 'JetBrains Mono', monospace",
                          scrollBeyondLastLine: false,
                          padding: { top: 16 }
                      }}
-                     loading=${html`
-                         <div className="flex items-center justify-center h-full text-slate-400 space-x-2">
-                             <${Loader2} className="animate-spin" size=${20} />
-                             <span>Initializing Editor...</span>
-                         </div>
-                     `}
                   />
                 </div>
             </div>

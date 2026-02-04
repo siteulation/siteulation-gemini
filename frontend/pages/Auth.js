@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { api } from '../services/api.js';
 import { useNavigate } from 'react-router-dom';
 import { html } from '../utils.js';
-import { Lock, User, Mail, ArrowRight, Loader2, CheckCircle, MailCheck } from 'lucide-react';
+import { Lock, User, Mail, ArrowRight, Loader2, CheckCircle, MailCheck, Shield, Key } from 'lucide-react';
 
 const Auth = ({ setUser }) => {
   const [view, setView] = useState('signin');
@@ -12,8 +12,6 @@ const Auth = ({ setUser }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
-  
-  // Verification Sent State
   const [verificationSent, setVerificationSent] = useState(false);
   
   const navigate = useNavigate();
@@ -26,21 +24,13 @@ const Auth = ({ setUser }) => {
     try {
       if (view === 'signup') {
         const data = await api.auth.signUp(email, password, username);
-        
-        // If the server returns user data but no session, or just indicates success
-        // we assume verification is required (unless auto-confirm is enabled on the server,
-        // but since we switched to public API, it usually respects Supabase settings)
-        
-        // If we get an access_token immediately, they are logged in (auto-confirm)
         if (data.access_token) {
             api.setToken(data.access_token);
             setUser(data.user);
             navigate('/');
         } else {
-            // Email Verification Flow
             setVerificationSent(true);
         }
-
       } else {
         const data = await api.auth.signIn(email, password);
         if (data.access_token) {
@@ -66,24 +56,26 @@ const Auth = ({ setUser }) => {
 
   if (verificationSent) {
       return html`
-        <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950 relative">
-            <div className="w-full max-w-sm relative z-10 bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-8 text-center shadow-2xl">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 text-green-400 mb-6">
+        <div className="min-h-screen flex items-center justify-center p-6 bg-[#0a0c10] font-mono">
+            <div className="w-full max-w-sm border border-green-500/30 bg-slate-900/80 p-8 text-center shadow-[0_0_20px_rgba(34,197,94,0.1)] relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-green-500/50"></div>
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 text-green-400 mb-6 border border-green-500/30">
                     <${MailCheck} size=${32} />
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2">Check Your Inbox</h2>
-                <p className="text-slate-400 mb-6">
-                    We've sent a verification link to <br/>
-                    <span className="font-bold text-white">${email}</span>.
+                <h2 className="text-xl font-bold text-white mb-2 uppercase tracking-widest">Verification Sent</h2>
+                <p className="text-slate-400 text-xs mb-6">
+                    A secure link has been dispatched to <br/>
+                    <span className="font-bold text-green-400">${email}</span>.
                 </p>
-                <div className="text-sm text-slate-500 bg-slate-800/50 p-4 rounded-lg mb-6">
-                    Please verify your email address to activate your account and access the terminal.
+                <div className="text-xs text-slate-500 bg-black p-4 border border-slate-800 mb-6">
+                    > ACCESS_PENDING<br/>
+                    > WAITING_FOR_USER_CONFIRMATION...
                 </div>
                 <button 
                     onClick=${() => window.location.reload()}
-                    className="w-full bg-white text-slate-950 font-bold py-3 rounded-lg hover:bg-slate-200 transition-all"
+                    className="w-full bg-slate-800 text-white font-bold py-3 hover:bg-slate-700 transition-all text-xs uppercase border border-slate-600"
                 >
-                    Back to Sign In
+                    Return to Terminal
                 </button>
             </div>
         </div>
@@ -91,81 +83,94 @@ const Auth = ({ setUser }) => {
   }
 
   return html`
-    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950 relative">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-[128px]"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-[128px]"></div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#0a0c10] relative overflow-hidden font-mono">
+      <!-- Grid Background -->
+      <div className="absolute inset-0 opacity-[0.03]" style=${{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+      
+      <!-- Scan line -->
+      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(transparent_0%,rgba(0,255,0,0.02)_50%,transparent_100%)] bg-[length:100%_4px] animate-scan"></div>
 
       <div className="w-full max-w-sm relative z-10">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-4">
-            <img 
-              src="https://raw.githubusercontent.com/siteulation/Siteulation/refs/heads/main/siteulationlogo.png" 
-              alt="Siteulation Logo" 
-              className="w-20 h-20 rounded-2xl shadow-2xl shadow-primary-500/30" 
-            />
-          </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
-            ${view === 'signin' ? 'Welcome Back' : 'Create Account'}
-          </h1>
-          <p className="text-slate-400 text-sm mt-2">
-            ${view === 'signin' ? 'Enter credentials to access the terminal.' : 'Initialize your identity profile.'}
-          </p>
+        <!-- Terminal Header -->
+        <div className="bg-slate-900 border-x border-t border-slate-700 p-2 flex items-center justify-between">
+            <div className="flex space-x-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500/50"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></div>
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
+            </div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-widest">SECURE_ACCESS_V2.0</div>
         </div>
 
-        <div className="bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl">
+        <div className="bg-[#111] border border-slate-700 p-8 shadow-2xl relative">
+          <!-- Corner Accents -->
+          <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white/50"></div>
+          <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-white/50"></div>
+          <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-white/50"></div>
+          <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-white/50"></div>
+
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center mb-4 p-2 border border-slate-700 bg-slate-900 rounded">
+               <${Shield} size=${32} className="text-slate-200" />
+            </div>
+            <h1 className="text-xl font-bold text-white tracking-widest uppercase">
+              ${view === 'signin' ? 'System Login' : 'New User Reg.'}
+            </h1>
+            <p className="text-slate-500 text-[10px] mt-1 uppercase tracking-wider">
+              ${view === 'signin' ? 'Enter credentials to authorize.' : 'Initialize identity protocol.'}
+            </p>
+          </div>
+
           ${error && html`
-            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-200 text-xs rounded-lg text-center font-mono">
-              ${error}
+            <div className="mb-6 p-2 bg-red-900/20 border border-red-900/50 text-red-400 text-xs text-center border-l-2 border-l-red-500">
+              [ERROR] ${error}
             </div>
           `}
 
           <form onSubmit=${handleAuth} className="space-y-4">
             ${view === 'signup' && html`
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Username</label>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-1">Identifier (Username)</label>
                 <div className="relative group">
-                  <${User} className="absolute left-3 top-3 text-slate-500 group-focus-within:text-primary-400 transition-colors" size=${16} />
+                  <${User} className="absolute left-3 top-2.5 text-slate-600" size=${14} />
                   <input
                     type="text"
                     value=${username}
                     onChange=${(e) => setUsername(e.target.value)}
                     required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all placeholder:text-slate-600"
-                    placeholder="Operator Name"
+                    className="w-full bg-[#050505] border border-slate-700 rounded-none py-2 pl-9 pr-4 text-xs text-green-500 focus:border-green-500 outline-none transition-colors placeholder:text-slate-800 font-mono"
+                    placeholder="OPERATOR_ID"
                   />
                 </div>
               </div>
             `}
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Email</label>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-1">Comms (Email)</label>
               <div className="relative group">
-                <${Mail} className="absolute left-3 top-3 text-slate-500 group-focus-within:text-primary-400 transition-colors" size=${16} />
+                <${Mail} className="absolute left-3 top-2.5 text-slate-600" size=${14} />
                 <input
                   type="email"
                   value=${email}
                   onChange=${(e) => setEmail(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all placeholder:text-slate-600"
-                  placeholder="name@example.com"
+                  className="w-full bg-[#050505] border border-slate-700 rounded-none py-2 pl-9 pr-4 text-xs text-green-500 focus:border-green-500 outline-none transition-colors placeholder:text-slate-800 font-mono"
+                  placeholder="USER@NET.LOC"
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-1">Password</label>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-1">Key (Password)</label>
               <div className="relative group">
-                <${Lock} className="absolute left-3 top-3 text-slate-500 group-focus-within:text-primary-400 transition-colors" size=${16} />
+                <${Key} className="absolute left-3 top-2.5 text-slate-600" size=${14} />
                 <input
                   type="password"
                   value=${password}
                   onChange=${(e) => setPassword(e.target.value)}
                   required
                   minLength=${6}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2.5 pl-10 pr-4 text-sm text-white focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 outline-none transition-all placeholder:text-slate-600"
-                  placeholder="••••••••"
+                  className="w-full bg-[#050505] border border-slate-700 rounded-none py-2 pl-9 pr-4 text-xs text-green-500 focus:border-green-500 outline-none transition-colors placeholder:text-slate-800 font-mono"
+                  placeholder="******"
                 />
               </div>
             </div>
@@ -173,27 +178,24 @@ const Auth = ({ setUser }) => {
             <button
               type="submit"
               disabled=${loading}
-              className="w-full bg-white text-slate-950 font-bold py-3 rounded-lg hover:bg-slate-200 active:scale-[0.98] transition-all flex items-center justify-center space-x-2 mt-2"
+              className="w-full bg-slate-200 text-black font-bold py-3 hover:bg-white active:scale-[0.99] transition-all flex items-center justify-center space-x-2 mt-4 text-xs uppercase tracking-widest border border-white"
             >
               ${loading ? html`
-                <${Loader2} className="animate-spin" size=${18} />
+                <${Loader2} className="animate-spin" size=${14} />
                 <span>Processing...</span>
               ` : html`
-                <span>${view === 'signin' ? 'Sign In' : 'Sign Up'}</span>
-                <${ArrowRight} size=${16} />
+                <span>${view === 'signin' ? 'Authorize' : 'Register'}</span>
+                <${ArrowRight} size=${14} />
               `}
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-white/5 text-center">
-            <p className="text-slate-500 text-sm">
-              ${view === 'signin' ? "Don't have an account?" : "Already have an account?"}
-            </p>
+          <div className="mt-6 pt-6 border-t border-slate-800 text-center">
             <button
               onClick=${toggleView}
-              className="mt-2 text-primary-400 hover:text-white text-sm font-medium transition-colors hover:underline"
+              className="text-slate-500 hover:text-green-400 text-[10px] uppercase tracking-wider transition-colors hover:underline decoration-green-500/50"
             >
-              ${view === 'signin' ? 'Create new account' : 'Sign in to existing account'}
+              ${view === 'signin' ? '> Request New Identity' : '> Switch to Login'}
             </button>
           </div>
         </div>

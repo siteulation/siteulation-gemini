@@ -26,35 +26,36 @@ create table public.carts (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- Create a table for Credit Requests (Manual Verification)
+create table public.credit_requests (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references auth.users(id) not null,
+  username text,
+  cashtag text not null,
+  amount_usd numeric not null,
+  credits_requested integer not null,
+  status text default 'pending', -- 'pending', 'approved', 'denied'
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- Enable RLS
 alter table public.profiles enable row level security;
 alter table public.carts enable row level security;
+alter table public.credit_requests enable row level security;
 
 -- Policies for Carts
--- Everyone can read carts (even unlisted ones if they have the ID, but api filters feed)
-create policy "Carts are public" on public.carts
-  for select using (true);
-
--- Authenticated users can insert their own carts
-create policy "Users can insert own carts" on public.carts
-  for insert with check (auth.uid() = user_id);
-  
--- Allow users to update their own carts (e.g., for renaming or listing)
-create policy "Users can update own carts" on public.carts
-  for update using (auth.uid() = user_id);
-
--- Allow the service role (backend) to update views, or create specific policy
--- For simplicity, we rely on the backend using the Service Role Key which bypasses RLS for updates
+create policy "Carts are public" on public.carts for select using (true);
+create policy "Users can insert own carts" on public.carts for insert with check (auth.uid() = user_id);
+create policy "Users can update own carts" on public.carts for update using (auth.uid() = user_id);
 
 -- Policies for Profiles
-create policy "Public profiles are viewable by everyone" on public.profiles
-  for select using (true);
+create policy "Public profiles are viewable by everyone" on public.profiles for select using (true);
+create policy "Users can insert their own profile" on public.profiles for insert with check (auth.uid() = id);
+create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
 
-create policy "Users can insert their own profile" on public.profiles
-  for insert with check (auth.uid() = id);
-
-create policy "Users can update own profile" on public.profiles
-  for update using (auth.uid() = id);
+-- Policies for Credit Requests
+create policy "Users can view own requests" on public.credit_requests for select using (auth.uid() = user_id);
+create policy "Users can insert own requests" on public.credit_requests for insert with check (auth.uid() = user_id);
 
 -- Function to handle new user signup (Trigger)
 create or replace function public.handle_new_user()
