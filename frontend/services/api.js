@@ -1,7 +1,7 @@
 
 import { BACKEND_URL } from '../constants.js';
 
-const TOKEN_KEY = 'siteulation_auth_token';
+const TOKEN_KEY = 'playsoul_auth_token';
 
 async function handleResponse(response) {
   const contentType = response.headers.get('content-type');

@@ -171,7 +171,7 @@ def serve_html_with_meta(title=None, description=None):
     with open(INDEX_PATH, 'r') as f:
         html_content = f.read()
 
-    default_title = "Siteulation | Digital Reality Generator"
+    default_title = "PlaySOUL | AI Game Generation Platform"
     default_desc = "Generate your digital reality. AI-powered single-file web app generator using Gemini 3.0."
     
     target_title = title if title else default_title
@@ -193,8 +193,8 @@ def generate_with_openrouter(prompt, model):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_KEY}",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://siteulation.com",
-        "X-Title": "Siteulation"
+        "HTTP-Referer": "https://playsoul.com",
+        "X-Title": "PlaySOUL"
     }
     
     payload = {
@@ -494,7 +494,7 @@ def random_project():
             return jsonify({"error": "Failed to fetch random cart"}), 500
             
         cart_id = data[0]['id']
-        project_url = f"https://siteulation.onrender.com/site/{cart_id}"
+        project_url = f"https://playsoul.com/site/{cart_id}"
         
         return jsonify({
             "id": cart_id,
@@ -681,7 +681,7 @@ def generate_cart():
         return jsonify({"error": f"Insufficient credits. Requires {cost} credit(s), you have {current_credits}."}), 402
 
     system_instruction = (
-        "You are Siteulation AI. You generate web applications. "
+        "You are PlaySOUL AI. You generate web applications and games. "
         "You MUST return the code in a valid JSON format. "
         "The JSON object must have a key 'files', which is an array of objects. "
         "Each object must have 'name' (filename, e.g., 'index.html', 'style.css') and 'content' (the file code). "
@@ -836,9 +836,9 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
         print(f"Save Error: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/siteulationlogo.png')
+@app.route('/playsoullogo.png')
 def serve_logo():
-    logo_filename = 'siteulationlogo.png'
+    logo_filename = 'playsoullogo.png'
     logo_path = os.path.join(BASE_DIR, logo_filename)
     if os.path.exists(logo_path):
         return send_file(logo_path, mimetype='image/png')
@@ -866,7 +866,7 @@ def serve_site_preview(id):
                 if len(title) > 60:
                     title = title[:57] + "..."
                 username = cart.get('username', 'Anonymous')
-                description = f"A Siteulation cart by {username}"
+                description = f"A PlaySOUL cart by {username}"
     except Exception as e:
         print(f"Meta fetch error: {e}")
 

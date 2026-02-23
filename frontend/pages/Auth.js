@@ -83,93 +83,84 @@ const Auth = ({ setUser }) => {
   }
 
   return html`
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#0a0c10] relative overflow-hidden font-mono">
-      <!-- Grid Background -->
-      <div className="absolute inset-0 opacity-[0.03]" style=${{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
-      
-      <!-- Scan line -->
-      <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(transparent_0%,rgba(0,255,0,0.02)_50%,transparent_100%)] bg-[length:100%_4px] animate-scan"></div>
-
+    <div className="min-h-screen flex items-center justify-center p-6 overflow-hidden" style=${{
+        backgroundColor: '#2563eb',
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.4'/%3E%3C/svg%3E")`,
+        backgroundSize: '120px 30px'
+    }}>
       <div className="w-full max-w-sm relative z-10">
-        <!-- Terminal Header -->
-        <div className="bg-slate-900 border-x border-t border-slate-700 p-2 flex items-center justify-between">
-            <div className="flex space-x-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500/50"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></div>
-                <div className="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
-            </div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-widest">SECURE_ACCESS_V2.0</div>
-        </div>
-
-        <div className="bg-[#111] border border-slate-700 p-8 shadow-2xl relative">
+        <div className="bg-[#FFF9D2] border-4 border-[#5C3A21] p-8 shadow-2xl relative transform -rotate-1">
           <!-- Corner Accents -->
-          <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-white/50"></div>
-          <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-white/50"></div>
-          <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-white/50"></div>
-          <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-white/50"></div>
+          <div className="absolute top-2 left-2 w-4 h-4 border-t-2 border-l-2 border-[#5C3A21]/30"></div>
+          <div className="absolute top-2 right-2 w-4 h-4 border-t-2 border-r-2 border-[#5C3A21]/30"></div>
+          <div className="absolute bottom-2 left-2 w-4 h-4 border-b-2 border-l-2 border-[#5C3A21]/30"></div>
+          <div className="absolute bottom-2 right-2 w-4 h-4 border-b-2 border-r-2 border-[#5C3A21]/30"></div>
 
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center mb-4 p-2 border border-slate-700 bg-slate-900 rounded">
-               <${Shield} size=${32} className="text-slate-200" />
-            </div>
-            <h1 className="text-xl font-bold text-white tracking-widest uppercase">
-              ${view === 'signin' ? 'System Login' : 'New User Reg.'}
+            <img 
+                src="https://raw.githubusercontent.com/siteulation/Siteulation/refs/heads/main/converted_1771566390817.png" 
+                alt="PlaySOUL" 
+                className="h-16 mx-auto mb-4"
+                crossOrigin="anonymous"
+            />
+            <h1 className="text-2xl font-bold text-[#5C3A21] tracking-tight uppercase">
+              ${view === 'signin' ? 'Welcome Back' : 'Join the Quest'}
             </h1>
-            <p className="text-slate-500 text-[10px] mt-1 uppercase tracking-wider">
-              ${view === 'signin' ? 'Enter credentials to authorize.' : 'Initialize identity protocol.'}
+            <p className="text-[#5C3A21]/70 text-sm mt-1 font-medium">
+              ${view === 'signin' ? 'Enter your credentials to continue.' : 'Create an account to start building.'}
             </p>
           </div>
 
           ${error && html`
-            <div className="mb-6 p-2 bg-red-900/20 border border-red-900/50 text-red-400 text-xs text-center border-l-2 border-l-red-500">
-              [ERROR] ${error}
+            <div className="mb-6 p-2 bg-red-100 border border-red-300 text-red-700 text-xs text-center font-bold">
+              ${error}
             </div>
           `}
 
           <form onSubmit=${handleAuth} className="space-y-4">
             ${view === 'signup' && html`
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-1">Identifier (Username)</label>
+                <label className="text-xs font-bold text-[#5C3A21] uppercase tracking-wider pl-1">Username</label>
                 <div className="relative group">
-                  <${User} className="absolute left-3 top-2.5 text-slate-600" size=${14} />
+                  <${User} className="absolute left-3 top-2.5 text-[#5C3A21]/50" size=${14} />
                   <input
                     type="text"
                     value=${username}
                     onChange=${(e) => setUsername(e.target.value)}
                     required
-                    className="w-full bg-[#050505] border border-slate-700 rounded-none py-2 pl-9 pr-4 text-xs text-green-500 focus:border-green-500 outline-none transition-colors placeholder:text-slate-800 font-mono"
-                    placeholder="OPERATOR_ID"
+                    className="w-full bg-white/50 border-2 border-[#5C3A21] rounded py-2 pl-9 pr-4 text-sm text-[#5C3A21] focus:bg-white outline-none transition-all placeholder:text-[#5C3A21]/30"
+                    placeholder="CreativeSoul"
                   />
                 </div>
               </div>
             `}
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-1">Comms (Email)</label>
+              <label className="text-xs font-bold text-[#5C3A21] uppercase tracking-wider pl-1">Email</label>
               <div className="relative group">
-                <${Mail} className="absolute left-3 top-2.5 text-slate-600" size=${14} />
+                <${Mail} className="absolute left-3 top-2.5 text-[#5C3A21]/50" size=${14} />
                 <input
                   type="email"
                   value=${email}
                   onChange=${(e) => setEmail(e.target.value)}
                   required
-                  className="w-full bg-[#050505] border border-slate-700 rounded-none py-2 pl-9 pr-4 text-xs text-green-500 focus:border-green-500 outline-none transition-colors placeholder:text-slate-800 font-mono"
-                  placeholder="USER@NET.LOC"
+                  className="w-full bg-white/50 border-2 border-[#5C3A21] rounded py-2 pl-9 pr-4 text-sm text-[#5C3A21] focus:bg-white outline-none transition-all placeholder:text-[#5C3A21]/30"
+                  placeholder="you@example.com"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider pl-1">Key (Password)</label>
+              <label className="text-xs font-bold text-[#5C3A21] uppercase tracking-wider pl-1">Password</label>
               <div className="relative group">
-                <${Key} className="absolute left-3 top-2.5 text-slate-600" size=${14} />
+                <${Key} className="absolute left-3 top-2.5 text-[#5C3A21]/50" size=${14} />
                 <input
                   type="password"
                   value=${password}
                   onChange=${(e) => setPassword(e.target.value)}
                   required
                   minLength=${6}
-                  className="w-full bg-[#050505] border border-slate-700 rounded-none py-2 pl-9 pr-4 text-xs text-green-500 focus:border-green-500 outline-none transition-colors placeholder:text-slate-800 font-mono"
+                  className="w-full bg-white/50 border-2 border-[#5C3A21] rounded py-2 pl-9 pr-4 text-sm text-[#5C3A21] focus:bg-white outline-none transition-all placeholder:text-[#5C3A21]/30"
                   placeholder="******"
                 />
               </div>
@@ -178,24 +169,24 @@ const Auth = ({ setUser }) => {
             <button
               type="submit"
               disabled=${loading}
-              className="w-full bg-slate-200 text-black font-bold py-3 hover:bg-white active:scale-[0.99] transition-all flex items-center justify-center space-x-2 mt-4 text-xs uppercase tracking-widest border border-white"
+              className="w-full bg-[#5C3A21] text-[#FFF9D2] font-bold py-3 hover:bg-[#4A2F1B] active:scale-[0.98] transition-all flex items-center justify-center space-x-2 mt-4 text-sm uppercase tracking-widest shadow-md"
             >
               ${loading ? html`
                 <${Loader2} className="animate-spin" size=${14} />
                 <span>Processing...</span>
               ` : html`
-                <span>${view === 'signin' ? 'Authorize' : 'Register'}</span>
+                <span>${view === 'signin' ? 'Log In' : 'Sign Up'}</span>
                 <${ArrowRight} size=${14} />
               `}
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-slate-800 text-center">
+          <div className="mt-6 pt-6 border-t border-[#5C3A21]/20 text-center">
             <button
               onClick=${toggleView}
-              className="text-slate-500 hover:text-green-400 text-[10px] uppercase tracking-wider transition-colors hover:underline decoration-green-500/50"
+              className="text-[#5C3A21] hover:text-[#A05A2C] text-xs font-bold uppercase tracking-wider transition-colors hover:underline"
             >
-              ${view === 'signin' ? '> Request New Identity' : '> Switch to Login'}
+              ${view === 'signin' ? "Don't have an account? Sign Up" : "Already have an account? Log In"}
             </button>
           </div>
         </div>

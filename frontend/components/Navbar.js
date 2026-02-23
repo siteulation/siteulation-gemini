@@ -88,22 +88,15 @@ const Navbar = ({ user, setUser }) => {
   }, [showDonate, user]);
 
   return html`
-    <nav className="fixed top-0 z-50 w-full border-b border-white/5 bg-[#0f1219]/95 backdrop-blur-md shadow-lg">
+    <nav className="fixed top-0 z-50 w-full bg-[#A05A2C] shadow-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <${Link} to="/" className="flex items-center space-x-3 group">
-          <div className="p-0.5 bg-gradient-to-br from-slate-700 to-black rounded-lg border border-slate-600 shadow-inner">
+        <${Link} to="/" className="flex items-center group">
              <img 
-                src="https://raw.githubusercontent.com/siteulation/Siteulation/refs/heads/main/siteulationlogo.png" 
-                alt="Siteulation Logo" 
-                className="w-8 h-8 rounded opacity-90 group-hover:opacity-100 transition-opacity" 
+                src="https://raw.githubusercontent.com/siteulation/Siteulation/refs/heads/main/playsoul%20outline.svg" 
+                alt="PlaySOUL Logo" 
+                className="h-10 opacity-90 group-hover:opacity-100 transition-opacity" 
+                crossOrigin="anonymous"
              />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-black tracking-tighter text-slate-200 uppercase leading-none">
-                Site<span className="text-primary-500">ulation</span>
-            </span>
-            <span className="text-[9px] font-mono text-slate-500 tracking-[0.2em] uppercase">Sys.v2</span>
-          </div>
         <//>
 
         <div className="flex items-center space-x-4">
@@ -111,10 +104,10 @@ const Navbar = ({ user, setUser }) => {
           <!-- Donate Button (Credits) -->
           <button 
             onClick=${() => setShowDonate(true)}
-            className="hidden sm:flex items-center space-x-2 bg-gradient-to-b from-slate-800 to-slate-900 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-sm hover:border-primary-500/50 hover:text-white transition-all text-xs font-bold uppercase tracking-wider shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+            className="hidden sm:flex items-center space-x-2 bg-white text-black border border-black px-3 py-1.5 rounded hover:bg-gray-100 transition-all text-sm font-bold shadow-sm"
           >
             ${user?.is_admin ? html`
-                <${ShieldCheck} size=${14} className="text-red-400" />
+                <${ShieldCheck} size=${14} className="text-red-500" />
                 <span>Admin Queue</span>
             ` : html`
                 <${Heart} size=${14} className="text-pink-500" />
@@ -126,30 +119,28 @@ const Navbar = ({ user, setUser }) => {
             <${React.Fragment}>
               
               <!-- Credits Display -->
-              <div className="hidden sm:flex items-center bg-black border border-slate-800 rounded-sm px-3 py-1.5 text-xs font-mono font-medium text-green-400 shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]" title="Available Credits">
-                 <${Coins} size=${12} className="mr-2 text-slate-500" />
+              <div className="hidden sm:flex items-center bg-white border border-black rounded px-3 py-1.5 text-sm font-bold text-black shadow-sm" title="Available Credits">
+                 <${Coins} size=${14} className="mr-2 text-yellow-600" />
                  <span>${user.credits !== undefined ? user.credits : 0} CR</span>
               </div>
 
               <${Link}
                 to="/create"
-                className="hidden sm:flex items-center space-x-2 bg-slate-200 text-slate-950 px-4 py-2 rounded-sm hover:bg-white transition-all font-bold text-xs uppercase tracking-wide border-b-2 border-slate-400 hover:border-slate-300 active:border-b-0 active:translate-y-[2px]"
+                className="hidden sm:flex items-center space-x-2 bg-white text-black px-4 py-2 rounded hover:bg-gray-100 transition-all font-bold text-sm border border-black shadow-sm"
               >
                 <${Plus} size=${14} />
-                <span>New Cart</span>
+                <span>Build!</span>
               <//>
               
-              <div className="h-6 w-px bg-slate-800 mx-2"></div>
-              
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 ml-2">
                 <div className="flex flex-col items-end hidden md:flex">
-                  <span className="text-xs font-mono font-bold text-slate-400 uppercase">
+                  <span className="text-sm font-bold text-white">
                     ${user.user_metadata?.username || 'Operator'}
                   </span>
                 </div>
                 <button
                   onClick=${handleLogout}
-                  className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded transition-colors"
+                  className="p-2 text-white hover:text-red-200 transition-colors"
                   title="Sign Out"
                 >
                   <${LogOut} size=${18} />
@@ -157,13 +148,20 @@ const Navbar = ({ user, setUser }) => {
               </div>
             <//>
           ` : html`
-            <${Link}
-              to="/auth"
-              className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors font-bold text-xs uppercase tracking-wide px-4 py-2 border border-slate-700 rounded-sm hover:bg-slate-800"
-            >
-              <${User} size=${16} />
-              <span>Login</span>
-            <//>
+            <div className="flex items-center space-x-3">
+              <${Link}
+                to="/auth"
+                className="bg-white text-black font-bold text-sm px-4 py-2 rounded border border-black hover:bg-gray-100 transition-colors shadow-sm"
+              >
+                Sign up
+              <//>
+              <${Link}
+                to="/auth"
+                className="bg-white text-black font-bold text-sm px-4 py-2 rounded border border-black hover:bg-gray-100 transition-colors shadow-sm"
+              >
+                Log in
+              <//>
+            </div>
           `}
         </div>
       </div>

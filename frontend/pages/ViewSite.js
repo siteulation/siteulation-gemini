@@ -193,59 +193,63 @@ const ViewSite = ({ user }) => {
   };
 
   return html`
-    <div className="flex flex-col h-screen bg-[#050505] pt-16">
+    <div className="flex flex-col h-screen pt-16" style=${{
+        backgroundColor: '#2563eb',
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.4'/%3E%3C/svg%3E")`,
+        backgroundSize: '120px 30px'
+    }}>
       <!-- Toolbar -->
-      <div className="bg-[#111] border-b border-white/10 px-4 h-14 flex items-center justify-between shrink-0 shadow-lg">
+      <div className="bg-[#A05A2C] border-b-4 border-[#5C3A21] px-4 h-14 flex items-center justify-between shrink-0 shadow-lg">
         <div className="flex items-center space-x-4 flex-1 mr-4 overflow-hidden">
-          <${Link} to="/" className="p-2 hover:bg-white/5 rounded-none border border-transparent hover:border-slate-700 text-slate-400 hover:text-white transition-all shrink-0">
+          <${Link} to="/" className="p-2 hover:bg-white/10 rounded text-white transition-all shrink-0">
             <${ArrowLeft} size=${20} />
           <//>
           
           <div className="flex items-center space-x-2 overflow-hidden w-full">
             ${isEditingName ? html`
-                <div className="flex items-center space-x-1 bg-slate-900 border border-slate-700 p-0.5 w-full max-w-sm">
+                <div className="flex items-center space-x-1 bg-white/20 border-2 border-white/30 p-0.5 w-full max-w-sm rounded">
                     <input 
                         type="text" 
                         value=${newName}
                         onChange=${(e) => setNewName(e.target.value)}
-                        className="bg-transparent border-none focus:ring-0 text-white text-sm px-2 py-1 w-full font-mono"
+                        className="bg-transparent border-none focus:ring-0 text-white text-sm px-2 py-1 w-full font-bold"
                         autoFocus
                     />
-                    <button onClick=${handleRename} className="p-1 text-green-400 hover:bg-white/10"><${Check} size=${14} /></button>
-                    <button onClick=${() => setIsEditingName(false)} className="p-1 text-red-400 hover:bg-white/10"><${X} size=${14} /></button>
+                    <button onClick=${handleRename} className="p-1 text-green-200 hover:bg-white/10"><${Check} size=${14} /></button>
+                    <button onClick=${() => setIsEditingName(false)} className="p-1 text-red-200 hover:bg-white/10"><${X} size=${14} /></button>
                 </div>
             ` : html`
-                <h1 className="text-slate-200 font-bold text-sm truncate max-w-[200px] md:max-w-md font-mono uppercase tracking-wide" title=${cart.name || cart.prompt}>
+                <h1 className="text-white font-bold text-sm truncate max-w-[200px] md:max-w-md uppercase tracking-wide" title=${cart.name || cart.prompt}>
                     ${cart.name || cart.prompt}
                 </h1>
                 ${isOwner && html`
-                    <button onClick=${() => setIsEditingName(true)} className="text-slate-600 hover:text-white transition-colors p-1">
+                    <button onClick=${() => setIsEditingName(true)} className="text-white/60 hover:text-white transition-colors p-1">
                         <${Pencil} size=${12} />
                     </button>
                 `}
                 ${!cart.is_listed && html`
-                    <span className="text-[9px] bg-red-900/20 text-red-400 px-1.5 py-0.5 border border-red-900 ml-2 shrink-0">PRIVATE</span>
+                    <span className="text-[9px] bg-black/20 text-white px-1.5 py-0.5 border border-white/30 ml-2 shrink-0 font-bold">PRIVATE</span>
                 `}
             `}
           </div>
         </div>
 
-        <div className="flex items-center space-x-0.5 bg-black rounded p-0.5 border border-slate-800 shrink-0 hidden md:flex">
+        <div className="flex items-center space-x-0.5 bg-black/20 rounded p-0.5 border border-white/20 shrink-0 hidden md:flex">
           <button
             onClick=${() => setViewport('desktop')}
-            className=${`p-1.5 ${viewport === 'desktop' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:text-slate-400'}`}
+            className=${`p-1.5 rounded ${viewport === 'desktop' ? 'bg-white text-blue-600' : 'text-white/60 hover:text-white'}`}
           >
             <${Monitor} size=${16} />
           </button>
           <button
             onClick=${() => setViewport('tablet')}
-            className=${`p-1.5 ${viewport === 'tablet' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:text-slate-400'}`}
+            className=${`p-1.5 rounded ${viewport === 'tablet' ? 'bg-white text-blue-600' : 'text-white/60 hover:text-white'}`}
           >
             <${Tablet} size=${16} />
           </button>
           <button
             onClick=${() => setViewport('mobile')}
-            className=${`p-1.5 ${viewport === 'mobile' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:text-slate-400'}`}
+            className=${`p-1.5 rounded ${viewport === 'mobile' ? 'bg-white text-blue-600' : 'text-white/60 hover:text-white'}`}
           >
             <${Smartphone} size=${16} />
           </button>
@@ -255,7 +259,7 @@ const ViewSite = ({ user }) => {
            ${user && html`
              <button 
                 onClick=${handleRemix}
-                className="flex items-center space-x-1 px-3 py-1.5 bg-purple-900/20 text-purple-400 hover:bg-purple-900/40 border border-purple-800 rounded-sm text-xs font-bold transition-all uppercase"
+                className="flex items-center space-x-1 px-3 py-1.5 bg-white text-[#A05A2C] hover:bg-gray-100 border border-[#5C3A21] rounded text-xs font-bold transition-all uppercase shadow-sm"
              >
                 <${GitFork} size=${14} />
                 <span>Fork</span>
@@ -265,7 +269,7 @@ const ViewSite = ({ user }) => {
             ${isOwner && html`
                 <button
                     onClick=${toggleListed}
-                    className=${`flex items-center space-x-1 px-3 py-1.5 rounded-sm text-xs font-bold transition-all border uppercase ${cart.is_listed ? 'bg-green-900/20 text-green-400 border-green-800 hover:bg-green-900/30' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}
+                    className=${`flex items-center space-x-1 px-3 py-1.5 rounded text-xs font-bold transition-all border uppercase shadow-sm ${cart.is_listed ? 'bg-white text-green-600 border-green-600 hover:bg-gray-100' : 'bg-white text-gray-600 border-gray-600 hover:bg-gray-100'}`}
                 >
                     ${cart.is_listed ? html`<${Globe} size=${14} />` : html`<${Lock} size=${14} />`}
                     <span>${cart.is_listed ? 'Public' : 'Private'}</span>
@@ -273,11 +277,11 @@ const ViewSite = ({ user }) => {
             `}
 
            ${user?.is_admin && html`
-             <div className="flex items-center space-x-1 mx-2 border-r border-l border-white/10 px-2">
+             <div className="flex items-center space-x-1 mx-2 border-r border-l border-white/20 px-2">
                 <button 
                   onClick=${handleAdminDelete} 
                   disabled=${adminActionLoading}
-                  className="p-2 text-red-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
+                  className="p-2 text-white hover:text-red-200 transition-colors"
                 >
                   <${Trash2} size=${18} />
                 </button>
@@ -285,7 +289,7 @@ const ViewSite = ({ user }) => {
            `}
            <button 
                 onClick=${() => setShowCode(true)}
-                className="p-2 text-slate-500 hover:text-white transition-colors" 
+                className="p-2 text-white/70 hover:text-white transition-colors" 
                 title="View Source"
             >
              <${Code} size=${18} />
@@ -294,9 +298,9 @@ const ViewSite = ({ user }) => {
       </div>
 
       <!-- Canvas -->
-      <div className="flex-1 overflow-hidden bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-[#080808] flex justify-center items-center p-4 md:p-8">
+      <div className="flex-1 overflow-hidden flex justify-center items-center p-4 md:p-8">
         <div 
-          className="bg-white h-full transition-all duration-500 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden border-4 border-[#222] relative"
+          className="bg-white h-full transition-all duration-500 shadow-2xl overflow-hidden border-8 border-[#5C3A21] rounded-lg relative"
           style=${getViewportStyle()}
         >
           <iframe
@@ -310,17 +314,16 @@ const ViewSite = ({ user }) => {
 
       <!-- Code Viewer Modal -->
       ${showCode && html`
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-[#111] border border-slate-800 rounded-none w-full max-w-6xl h-[85vh] flex flex-col shadow-2xl overflow-hidden font-mono">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-[#FFF9D2] border-4 border-[#5C3A21] rounded-none w-full max-w-6xl h-[85vh] flex flex-col shadow-2xl overflow-hidden">
             <!-- Modal Header -->
-            <div className="flex items-center justify-between p-3 border-b border-slate-800 bg-[#151515]">
+            <div className="flex items-center justify-between p-3 border-b-4 border-[#5C3A21] bg-[#A05A2C]">
               <div className="flex items-center space-x-2">
-                 <div className="w-3 h-3 bg-slate-500 rounded-full"></div>
-                 <h3 className="text-slate-300 font-bold text-xs uppercase tracking-widest">Source_Inspector</h3>
+                 <h3 className="text-white font-bold text-sm uppercase tracking-widest">Source Inspector</h3>
               </div>
               <button 
                   onClick=${() => setShowCode(false)} 
-                  className="text-slate-500 hover:text-white transition-colors"
+                  className="text-white hover:text-red-200 transition-colors"
               >
                 <${X} size=${20} />
               </button>
@@ -329,26 +332,26 @@ const ViewSite = ({ user }) => {
             <!-- Modal Body -->
             <div className="flex flex-1 overflow-hidden">
                 <!-- Sidebar -->
-                <div className="w-48 md:w-64 bg-[#0a0a0a] border-r border-slate-800 flex flex-col overflow-y-auto">
+                <div className="w-48 md:w-64 bg-[#5C3A21]/10 border-r-4 border-[#5C3A21] flex flex-col overflow-y-auto">
                     <div className="p-0">
                         ${files.map((file, index) => html`
                             <button 
                                 key=${index}
                                 onClick=${() => setActiveFileIndex(index)}
-                                className=${`w-full text-left px-4 py-3 text-xs border-b border-slate-800/50 flex items-center space-x-2 transition-colors ${activeFileIndex === index ? 'bg-slate-800 text-white border-l-4 border-l-primary-500' : 'text-slate-500 hover:bg-slate-900 hover:text-slate-300'}`}
+                                className=${`w-full text-left px-4 py-3 text-xs border-b border-[#5C3A21]/20 flex items-center space-x-2 transition-colors ${activeFileIndex === index ? 'bg-[#5C3A21] text-white' : 'text-[#5C3A21] hover:bg-[#5C3A21]/20'}`}
                             >
                                 ${getFileIcon(file.name)}
-                                <span className="truncate">${file.name}</span>
+                                <span className="truncate font-bold">${file.name}</span>
                             </button>
                         `)}
                     </div>
                 </div>
 
                 <!-- Editor -->
-                <div className="flex-1 overflow-hidden bg-[#1e1e1e]">
+                <div className="flex-1 overflow-hidden bg-white">
                   <${Editor}
                      height="100%"
-                     theme="vs-dark"
+                     theme="vs-light"
                      language=${getLanguageFromFilename(files[activeFileIndex]?.name)}
                      value=${files[activeFileIndex]?.content || ''}
                      onChange=${handleEditorChange}
@@ -356,7 +359,7 @@ const ViewSite = ({ user }) => {
                          minimap: { enabled: false },
                          fontSize: 13,
                          readOnly: false,
-                         fontFamily: "'Fira Code', 'JetBrains Mono', monospace",
+                         fontFamily: "monospace",
                          scrollBeyondLastLine: false,
                          padding: { top: 16 }
                      }}
