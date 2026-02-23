@@ -140,6 +140,15 @@ def verify_token(req):
                         update_credits(user_id, 15, reset_date=today)
                     else:
                         update_credits(user_id, credits, reset_date=today)
+            else:
+                # Profile missing? Create it.
+                create_url = f"{SUPABASE_URL}/rest/v1/profiles"
+                requests.post(create_url, json={
+                    "id": user_id,
+                    "username": username,
+                    "credits": 15,
+                    "last_reset_date": str(date.today())
+                }, headers=get_db_headers())
             
             user['is_banned'] = is_banned
             user['credits'] = credits
