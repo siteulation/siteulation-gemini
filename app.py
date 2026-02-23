@@ -189,13 +189,18 @@ def generate_with_openrouter(prompt, model):
         raise Exception("OpenRouter Key not configured on server")
 
     url = "https://openrouter.ai/api/v1/chat/completions"
+    print(f"Calling OpenRouter URL: {url}")
     
     headers = {
-        "Authorization": f"Bearer {OPENROUTER_KEY}",
+        "Authorization": f"Bearer {OPENROUTER_KEY[:10]}...",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://playsoul.com",
         "X-Title": "PlaySOUL"
     }
+    print(f"Headers: {headers}")
+    
+    # Reset headers for real call
+    headers["Authorization"] = f"Bearer {OPENROUTER_KEY}"
     
     payload = {
         "model": model, 
@@ -218,7 +223,9 @@ def generate_with_openrouter(prompt, model):
         elif response.status_code == 429:
              raise HTTPException(description="OpenRouter Rate Limit Exceeded", response=Response("AI Provider Busy", status=429))
         else:
-            raise Exception(f"OpenRouter API failed with status {response.status_code}")
+            error_detail = response.text
+            print(f"OpenRouter API Error: {response.status_code} - {error_detail}")
+            raise Exception(f"OpenRouter API failed with status {response.status_code}: {error_detail}")
 
     except Exception as e:
         if isinstance(e, HTTPException):
@@ -751,11 +758,11 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
         if provider == 'openrouter':
             if model_choice == 'deepseek-free':
                 model_used = "deepseek/deepseek-r1:free"
-            elif model_choice == 'gemini-2-free':
-                model_used = "google/gemini-2.0-flash-exp:free"
             else:
+                # Try a very stable free model
                 model_used = "google/gemini-2.0-flash-exp:free"
 
+            print(f"Generating with OpenRouter: {model_used}")
             openrouter_prompt = f"{system_instruction}\n\n{final_prompt}"
             raw_output = generate_with_openrouter(openrouter_prompt, model=model_used)
             
