@@ -25,11 +25,11 @@ FRONTEND_DIR = os.path.join(BASE_DIR, 'frontend')
 INDEX_PATH = os.path.join(BASE_DIR, 'index.html')
 
 # --- Env Vars ---
-API_KEY = os.environ.get("APIKEY")
-OPENROUTER_KEY = os.environ.get("OPENROUTERKEY")
-SUPABASE_URL = os.environ.get("DATABASE_URL")
-SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY") # Secret Service Role Key
-SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY") # Public Anon Key
+API_KEY = os.environ.get("APIKEY", "").strip()
+OPENROUTER_KEY = os.environ.get("OPENROUTERKEY", "").strip()
+SUPABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY", "").strip() # Secret Service Role Key
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "").strip() # Public Anon Key
 ADMIN_USERNAME = "homelessman"
 
 # --- App Setup ---
