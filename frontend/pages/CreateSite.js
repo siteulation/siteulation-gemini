@@ -197,20 +197,20 @@ const CreateSite = () => {
                         <${Cloud} size=${16} className=${model === ModelType.GEMINI_2_FREE ? 'text-[#FFF9D2]' : 'text-[#5C3A21]'} />
                         <div>
                             <div className="text-xs font-bold uppercase">Gemma 3 2B</div>
-                            <div className="text-[10px] opacity-70 mt-1">Efficient & Fast.</div>
+                            <div className="text-[10px] opacity-70 mt-1">Ultra Fast.</div>
                         </div>
                         <div className="absolute top-2 right-2 text-[8px] bg-green-600 text-white px-1 font-bold">FREE</div>
                     </button>
 
                     <button
                         type="button"
-                        onClick=${() => selectModel(ModelType.DEEPSEEK_FREE, 'openrouter')}
-                        className=${`w-full p-3 border-2 text-left transition-all relative group flex items-start space-x-3 ${model === ModelType.DEEPSEEK_FREE ? 'bg-[#5C3A21] border-[#5C3A21] text-[#FFF9D2]' : 'bg-white/50 border-[#5C3A21]/30 text-[#5C3A21] hover:border-[#5C3A21]'}`}
+                        onClick=${() => selectModel(ModelType.GEMMA_27B_FREE, 'openrouter')}
+                        className=${`w-full p-3 border-2 text-left transition-all relative group flex items-start space-x-3 ${model === ModelType.GEMMA_27B_FREE ? 'bg-[#5C3A21] border-[#5C3A21] text-[#FFF9D2]' : 'bg-white/50 border-[#5C3A21]/30 text-[#5C3A21] hover:border-[#5C3A21]'}`}
                     >
-                        <${BrainCircuit} size=${16} className=${model === ModelType.DEEPSEEK_FREE ? 'text-[#FFF9D2]' : 'text-[#5C3A21]'} />
+                        <${BrainCircuit} size=${16} className=${model === ModelType.GEMMA_27B_FREE ? 'text-[#FFF9D2]' : 'text-[#5C3A21]'} />
                         <div>
-                            <div className="text-xs font-bold uppercase">Gemma 3 2B (Alt)</div>
-                            <div className="text-[10px] opacity-70 mt-1">Stable Backup.</div>
+                            <div className="text-xs font-bold uppercase">Gemma 3 27B</div>
+                            <div className="text-[10px] opacity-70 mt-1">High Intelligence.</div>
                         </div>
                         <div className="absolute top-2 right-2 text-[8px] bg-green-600 text-white px-1 font-bold">FREE</div>
                     </button>

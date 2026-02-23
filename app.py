@@ -756,8 +756,11 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
 
     try:
         if provider == 'openrouter':
-            # Use the new stable free model as requested
-            model_used = "google/gemma-3n-e2b-it:free"
+            if model_choice == 'gemma-27b-free':
+                model_used = "google/gemma-3-27b-it:free"
+            else:
+                # Default to the 2B version for other free requests
+                model_used = "google/gemma-3n-e2b-it:free"
 
             print(f"Generating with OpenRouter: {model_used}")
             openrouter_prompt = f"{system_instruction}\n\n{final_prompt}"
