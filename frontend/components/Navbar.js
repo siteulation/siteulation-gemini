@@ -133,11 +133,22 @@ const Navbar = ({ user, setUser }) => {
               <//>
               
               <div className="flex items-center space-x-3 ml-2">
-                <div className="flex flex-col items-end hidden md:flex">
-                  <span className="text-sm font-bold text-white">
-                    ${user.user_metadata?.username || 'Operator'}
-                  </span>
-                </div>
+                <${Link} to=${`/profile/${user.username}`} className="flex items-center space-x-3 group">
+                    <div className="flex flex-col items-end hidden md:flex">
+                        <span className="text-sm font-bold text-white group-hover:text-blue-200 transition-colors">
+                            ${user.username || 'Operator'}
+                        </span>
+                    </div>
+                    <div className="w-10 h-10 rounded-lg border-2 border-white/50 overflow-hidden bg-[#5C3A21] shadow-md group-hover:border-white transition-all">
+                        ${user.avatar_url ? html`
+                            <img src=${user.avatar_url} alt=${user.username} className="w-full h-full object-cover" />
+                        ` : html`
+                            <div className="w-full h-full flex items-center justify-center text-white">
+                                <${User} size=${20} />
+                            </div>
+                        `}
+                    </div>
+                <//>
                 <button
                   onClick=${handleLogout}
                   className="p-2 text-white hover:text-red-200 transition-colors"

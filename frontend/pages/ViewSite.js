@@ -232,6 +232,27 @@ const ViewSite = ({ user }) => {
                 `}
             `}
           </div>
+          
+          <!-- Creator Info -->
+          <div className="hidden lg:flex items-center ml-4 border-l border-white/20 pl-4">
+            <${Link} to=${`/profile/${cart.profiles?.username || cart.username}`} className="flex items-center space-x-2 group/creator">
+                <div className="w-8 h-8 rounded border border-white/30 overflow-hidden bg-[#5C3A21]">
+                    ${cart.profiles?.avatar_url ? html`
+                        <img src=${cart.profiles.avatar_url} className="w-full h-full object-cover" />
+                    ` : html`
+                        <div className="w-full h-full flex items-center justify-center text-white">
+                            <${User} size=${14} />
+                        </div>
+                    `}
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-[10px] text-white/60 uppercase font-bold leading-none mb-1">Creator</span>
+                    <span className="text-xs text-white font-bold group-hover/creator:text-blue-200 transition-colors leading-none">
+                        ${cart.profiles?.username || cart.username || 'Unknown'}
+                    </span>
+                </div>
+            <//>
+          </div>
         </div>
 
         <div className="flex items-center space-x-0.5 bg-black/20 rounded p-0.5 border border-white/20 shrink-0 hidden md:flex">

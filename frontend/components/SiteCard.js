@@ -81,10 +81,21 @@ export const SiteCard = ({ cart, currentUser, onDelete }) => {
                 </div>
 
                 <div className="flex items-end justify-between z-10">
-                    <div className="text-[10px] font-bold text-[#5C3A21]/70 leading-tight">
-                        <span className="block text-[#5C3A21]">DEV: ${cart.username || 'Unkown'}</span>
-                        <span className="block opacity-50">ID: ${cart.id.substring(0, 6)}</span>
-                    </div>
+                    <${Link} to=${`/profile/${cart.profiles?.username || cart.username}`} className="text-[10px] font-bold text-[#5C3A21]/70 leading-tight flex items-center space-x-2 group/author hover:text-[#5C3A21] transition-colors">
+                        <div className="w-6 h-6 rounded border border-[#5C3A21]/20 overflow-hidden bg-[#A05A2C]">
+                            ${cart.profiles?.avatar_url ? html`
+                                <img src=${cart.profiles.avatar_url} className="w-full h-full object-cover" />
+                            ` : html`
+                                <div className="w-full h-full flex items-center justify-center text-[#FFF9D2]">
+                                    <${User} size=${10} />
+                                </div>
+                            `}
+                        </div>
+                        <div>
+                            <span className="block text-[#5C3A21]">DEV: ${cart.profiles?.username || cart.username || 'Unknown'}</span>
+                            <span className="block opacity-50">ID: ${cart.id.substring(0, 6)}</span>
+                        </div>
+                    <//>
 
                     <div className="flex items-center space-x-2">
                          ${isAdminCreator && html`

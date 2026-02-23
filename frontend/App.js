@@ -6,6 +6,7 @@ import Home from './pages/Home.js';
 import Auth from './pages/Auth.js';
 import CreateSite from './pages/CreateSite.js';
 import ViewSite from './pages/ViewSite.js';
+import Profile from './pages/Profile.js';
 import { html } from './utils.js';
 
 const App = () => {
@@ -48,6 +49,7 @@ const App = () => {
               element=${user ? html`<${CreateSite} />` : html`<${Navigate} to="/auth" replace />`} 
             />
             <${Route} path="/site/:id" element=${html`<${ViewSite} user=${user} />`} />
+            <${Route} path="/profile/:username" element=${html`<${Profile} currentUser=${user} setUser=${setUser} />`} />
             <${Route} path="/cart/:id" element=${html`<${Navigate} to="/site/:id" replace />`} />
           <//>
         </main>

@@ -114,37 +114,39 @@ def verify_token(req):
             user = response.json()
             user_id = user['id']
             
-            # Fetch Profile Data (Banned status + Credits)
-            profile_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=is_banned,credits,last_reset_date"
+            # Fetch Profile Data (Banned status + Credits + Username + Avatar)
+            profile_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=is_banned,credits,last_reset_date,username,avatar_url"
             prof_resp = requests.get(profile_url, headers=get_db_headers())
             
             is_banned = False
             credits = 15
             last_reset = None
+            username = user.get('user_metadata', {}).get('username', 'Operator')
+            avatar_url = None
             
             if prof_resp.status_code == 200 and prof_resp.json():
                 profile = prof_resp.json()[0]
                 is_banned = profile.get('is_banned', False)
                 credits = profile.get('credits', 15)
                 last_reset_str = profile.get('last_reset_date')
+                username = profile.get('username') or username
+                avatar_url = profile.get('avatar_url')
                 
                 # Check for Daily Reset
-                # Logic: If it's a new day, we ONLY reset if they are BELOW the daily allowance (15).
-                # If they have purchased credits (e.g. 50), we DO NOT reset them down to 15.
                 today = date.today()
                 if last_reset_str != str(today):
                     if credits < 15:
                         credits = 15
                         update_credits(user_id, 15, reset_date=today)
                     else:
-                        # Just update the date so we don't check again today, preserve credits
                         update_credits(user_id, credits, reset_date=today)
             
             user['is_banned'] = is_banned
             user['credits'] = credits
+            user['username'] = username
+            user['avatar_url'] = avatar_url
             
             # Check Admin status
-            username = user.get('user_metadata', {}).get('username')
             user['is_admin'] = (username == ADMIN_USERNAME)
             
             # Cache the result
@@ -330,6 +332,63 @@ def auth_user():
     if user:
         return jsonify(user), 200
     return jsonify({"error": "Invalid or expired token"}), 401
+
+@app.route('/api/profile/update', methods=['POST'])
+def update_profile():
+    user = verify_token(request)
+    if not user: return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json or {}
+    new_username = data.get('username')
+    new_avatar_url = data.get('avatar_url')
+    
+    payload = {}
+    if new_username:
+        # Check if username is taken
+        check_url = f"{SUPABASE_URL}/rest/v1/profiles?username=eq.{new_username}&id=neq.{user['id']}"
+        check_resp = requests.get(check_url, headers=get_db_headers())
+        if check_resp.status_code == 200 and check_resp.json():
+            return jsonify({"error": "Username already taken"}), 400
+        payload['username'] = new_username
+        
+    if new_avatar_url:
+        payload['avatar_url'] = new_avatar_url
+        
+    if not payload:
+        return jsonify({"error": "No data provided"}), 400
+        
+    url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user['id']}"
+    resp = requests.patch(url, json=payload, headers=get_db_headers())
+    
+    if resp.status_code >= 400:
+        return jsonify({"error": resp.text}), resp.status_code
+        
+    return jsonify({"success": True}), 200
+
+@app.route('/api/profiles/<username>', methods=['GET'])
+def get_profile(username):
+    # Fetch Profile
+    url = f"{SUPABASE_URL}/rest/v1/profiles?username=eq.{username}&select=id,username,avatar_url,created_at"
+    resp = requests.get(url, headers=get_db_headers())
+    
+    if resp.status_code != 200 or not resp.json():
+        return jsonify({"error": "Profile not found"}), 404
+        
+    profile = resp.json()[0]
+    user_id = profile['id']
+    
+    # Fetch User's Carts
+    carts_url = f"{SUPABASE_URL}/rest/v1/carts?user_id=eq.{user_id}&is_listed=eq.true&order=created_at.desc&select=*"
+    carts_resp = requests.get(carts_url, headers=get_db_headers())
+    
+    projects = []
+    if carts_resp.status_code == 200:
+        projects = carts_resp.json()
+        
+    return jsonify({
+        "profile": profile,
+        "projects": projects
+    }), 200
 
 # --- Credits & Admin Routes ---
 
@@ -563,7 +622,8 @@ def get_carts():
     sort_mode = request.args.get('sort', 'recent')
     filter_user_id = request.args.get('user_id')
     
-    url = f"{SUPABASE_URL}/rest/v1/carts?select=*"
+    # Use join to get profile info
+    url = f"{SUPABASE_URL}/rest/v1/carts?select=*,profiles(username,avatar_url)"
 
     if filter_user_id:
         url += f"&user_id=eq.{filter_user_id}"
@@ -587,7 +647,7 @@ def get_carts():
 def get_cart_by_id(id):
     if not SUPABASE_URL: return jsonify({"error": "DB Config Missing"}), 500
 
-    url = f"{SUPABASE_URL}/rest/v1/carts?select=*&id=eq.{id}"
+    url = f"{SUPABASE_URL}/rest/v1/carts?select=*,profiles(username,avatar_url)&id=eq.{id}"
     resp = requests.get(url, headers=get_db_headers())
     data = resp.json()
     if not data:

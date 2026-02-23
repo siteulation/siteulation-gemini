@@ -130,5 +130,17 @@ export const api = {
     signOut: () => {
       localStorage.removeItem(TOKEN_KEY);
     }
+  },
+  
+  profile: {
+    get: async (username) => {
+        return api.request(`/api/profiles/${username}`);
+    },
+    update: async (data) => {
+        return api.request(`/api/profile/update`, {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+    }
   }
 };
