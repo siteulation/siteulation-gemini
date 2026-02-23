@@ -196,8 +196,8 @@ const CreateSite = () => {
                     >
                         <${Cloud} size=${16} className=${model === ModelType.GEMINI_2_FREE ? 'text-[#FFF9D2]' : 'text-[#5C3A21]'} />
                         <div>
-                            <div className="text-xs font-bold uppercase">Gemini 2.0 Flash</div>
-                            <div className="text-[10px] opacity-70 mt-1">Fast & Reliable.</div>
+                            <div className="text-xs font-bold uppercase">Gemma 3 2B</div>
+                            <div className="text-[10px] opacity-70 mt-1">Efficient & Fast.</div>
                         </div>
                         <div className="absolute top-2 right-2 text-[8px] bg-green-600 text-white px-1 font-bold">FREE</div>
                     </button>
@@ -209,8 +209,8 @@ const CreateSite = () => {
                     >
                         <${BrainCircuit} size=${16} className=${model === ModelType.DEEPSEEK_FREE ? 'text-[#FFF9D2]' : 'text-[#5C3A21]'} />
                         <div>
-                            <div className="text-xs font-bold uppercase">DeepSeek R1</div>
-                            <div className="text-[10px] opacity-70 mt-1">Logical & Precise.</div>
+                            <div className="text-xs font-bold uppercase">Gemma 3 2B (Alt)</div>
+                            <div className="text-[10px] opacity-70 mt-1">Stable Backup.</div>
                         </div>
                         <div className="absolute top-2 right-2 text-[8px] bg-green-600 text-white px-1 font-bold">FREE</div>
                     </button>

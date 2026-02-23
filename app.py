@@ -756,11 +756,8 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
 
     try:
         if provider == 'openrouter':
-            if model_choice == 'deepseek-free':
-                model_used = "deepseek/deepseek-r1:free"
-            else:
-                # Try a very stable free model
-                model_used = "google/gemini-2.0-flash-exp:free"
+            # Use the new stable free model as requested
+            model_used = "google/gemma-3n-e2b-it:free"
 
             print(f"Generating with OpenRouter: {model_used}")
             openrouter_prompt = f"{system_instruction}\n\n{final_prompt}"
