@@ -774,17 +774,17 @@ Return the updated project structure in the requested JSON format.
     raw_output = ""
     model_used = ""
 
+    # Map to the official Gemma models available in AI Studio
+    if model_choice == 'gemma-4-31b':
+        model_used = "gemma-4-31b"
+    else:
+        model_used = "gemma-3-27b"
+    
+    print(f"Generating with Official Gemma API: {model_used} (Cost: {cost})")
+    
     try:
         if not ai_client:
             raise Exception("Official API Key not configured on server")
-        
-        # Map to the best available official models
-        if model_choice == 'gemma-4-31b':
-            model_used = "gemini-3.1-pro-preview"
-        else:
-            model_used = "gemini-3-flash-preview"
-        
-        print(f"Generating with Gemini: {model_used} (as {model_choice})")
         
         response = ai_client.models.generate_content(
             model=model_used,
