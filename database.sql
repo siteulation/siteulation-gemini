@@ -73,11 +73,11 @@ create policy "Carts are public" on public.carts
   for select using (is_listed = true OR auth.uid() = user_id);
 
 drop policy if exists "Users can update own carts" on public.carts;
-create policy "Users can update own carts" 
+create policy "Users can update own carts" on public.carts 
   for update using (auth.uid() = user_id);
 
 drop policy if exists "Users can insert own carts" on public.carts;
-create policy "Users can insert own carts" 
+create policy "Users can insert own carts" on public.carts 
   for insert with check (auth.uid() = user_id);
 
 -- Profiles are public

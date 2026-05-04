@@ -911,7 +911,7 @@ You MUST implement real-time multiplayer functionality using the provided WebSoc
             "model": model_used,
             "code": final_code_storage,
             "views": 0,
-            "is_listed": False 
+            "is_listed": True 
         }
         db_resp = requests.post(url, json=payload, headers=get_db_headers())
         

@@ -8,10 +8,12 @@ import { Link } from 'react-router-dom';
 const Home = ({ user }) => {
   const [carts, setCarts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('recent'); // 'recent' | 'popular' | 'my_carts'
 
   const fetchCarts = async () => {
     setLoading(true);
+    setError(null);
     try {
       let endpoint = `/api/carts?sort=${activeTab}`;
       
@@ -30,8 +32,9 @@ const Home = ({ user }) => {
       } else {
         setCarts([]);
       }
-    } catch (error) {
-      console.error("Error fetching sites:", error);
+    } catch (err) {
+      console.error("Error fetching sites:", err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -126,6 +129,14 @@ const Home = ({ user }) => {
         ${loading ? html`
           <div className="flex justify-center items-center py-20">
             <${Loader2} className="animate-spin text-white" size=${48} />
+          </div>
+        ` : error ? html`
+          <div className="text-center py-20">
+             <div className="bg-red-500/20 text-red-200 p-6 rounded-lg border-2 border-red-500/50 inline-block max-w-lg backdrop-blur-sm">
+                <p className="font-bold uppercase mb-2 leading-none tracking-tighter text-xl">Shelf Malfunction</p>
+                <p className="text-sm opacity-80">${error}</p>
+                <button onClick=${fetchCarts} className="mt-4 px-4 py-2 bg-red-500 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-red-600 transition-colors">Emergency Restock</button>
+             </div>
           </div>
         ` : carts.length === 0 ? html`
           <div className="text-center py-20">
