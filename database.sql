@@ -69,8 +69,7 @@ end $$;
 alter table public.carts enable row level security;
 
 drop policy if exists "Carts are public" on public.carts;
-create policy "Carts are public" on public.carts 
-  for select using (is_listed = true OR auth.uid() = user_id);
+create policy "Carts are public" on public.carts for select using (true);
 
 drop policy if exists "Users can update own carts" on public.carts;
 create policy "Users can update own carts" on public.carts 

@@ -656,12 +656,26 @@ def get_carts():
         
     url += '&limit=50'
 
-    resp = requests.get(url, headers=get_db_headers())
-    if resp.status_code >= 400:
-        print(f"DB Error (get_carts): {resp.status_code} - {resp.text}")
-        return jsonify({"error": "Database query failed", "details": resp.json() if resp.headers.get('content-type') == 'application/json' else resp.text}), resp.status_code
+    # Robust query with logging
+    print(f"Fetching carts: Tab={activeTab}, User={filter_user_id}, URL={url}")
     
-    return jsonify(resp.json()), resp.status_code
+    resp = requests.get(url, headers=get_db_headers())
+    
+    if resp.status_code >= 400:
+        print(f"Primary fetch failed: {resp.status_code} - {resp.text}")
+        # Fallback: Try without join if join failed
+        url_simple = f"{SUPABASE_URL}/rest/v1/carts?select=*"
+        if filter_user_id: url_simple += f"&user_id=eq.{filter_user_id}"
+        else: url_simple += "&is_listed=eq.true"
+        url_simple += '&limit=50'
+        
+        resp = requests.get(url_simple, headers=get_db_headers())
+        if resp.status_code >= 400:
+             return jsonify({"error": "Double DB Failure", "details": resp.text}), resp.status_code
+
+    data = resp.json()
+    print(f"Found {len(data) if isinstance(data, list) else 0} carts")
+    return jsonify(data), 200
 
 @app.route('/api/carts/<id>', methods=['GET'])
 def get_cart_by_id(id):

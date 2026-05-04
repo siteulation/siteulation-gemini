@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, Trash2, Loader2, Lock, Cpu } from 'lucide-react';
+import { Eye, Trash2, Loader2, Lock, Cpu, User } from 'lucide-react';
 import { html } from '../utils.js';
 import { api } from '../services/api.js';
 
