@@ -8,9 +8,7 @@ import { html } from '../utils.js';
 const CreateSite = () => {
   const [prompt, setPrompt] = useState('');
   const [name, setName] = useState('');
-  const [model, setModel] = useState(ModelType.GEMINI_2_FREE);
-  const [isMultiplayer, setIsMultiplayer] = useState(false);
-  const [provider, setProvider] = useState('openrouter'); 
+  const [model, setModel] = useState(ModelType.GEMMA_3_27B);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -36,12 +34,6 @@ const CreateSite = () => {
     }
   }, [location]);
 
-  // Handle Model Selection Updates
-  const selectModel = (selectedModel, selectedProvider) => {
-      setModel(selectedModel);
-      setProvider(selectedProvider);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -54,9 +46,9 @@ const CreateSite = () => {
             prompt,
             name,
             model,
-            multiplayer: isMultiplayer,
+            multiplayer: false,
             remix_code: remixData ? remixData.code : null,
-            provider: provider,
+            provider: 'official',
             is_mobile: isMobile
         };
 
@@ -152,18 +144,6 @@ const CreateSite = () => {
                     </div>
                 </div>
 
-                <!-- Options -->
-                <div className="flex items-center space-x-4">
-                     <button
-                        type="button"
-                        onClick=${() => setIsMultiplayer(!isMultiplayer)}
-                        className=${`flex items-center space-x-3 px-4 py-2 border-2 transition-all ${isMultiplayer ? 'border-[#5C3A21] bg-[#5C3A21] text-[#FFF9D2]' : 'border-[#5C3A21] bg-white/30 text-[#5C3A21] hover:bg-white/50'}`}
-                    >
-                        <div className=${`w-3 h-3 border ${isMultiplayer ? 'bg-[#FFF9D2] border-[#FFF9D2]' : 'bg-transparent border-[#5C3A21]'}`}></div>
-                        <div className="text-xs font-bold uppercase tracking-wider">Multiplayer (Socket.IO)</div>
-                    </button>
-                </div>
-
                 <!-- Fabricate Button -->
                 <button
                     type="submit"
@@ -191,44 +171,37 @@ const CreateSite = () => {
                 <div className="space-y-3">
                     <button
                         type="button"
-                        onClick=${() => selectModel(ModelType.GEMINI_2_FREE, 'openrouter')}
-                        className=${`w-full p-3 border-2 text-left transition-all relative group flex items-start space-x-3 ${model === ModelType.GEMINI_2_FREE ? 'bg-[#5C3A21] border-[#5C3A21] text-[#FFF9D2]' : 'bg-white/50 border-[#5C3A21]/30 text-[#5C3A21] hover:border-[#5C3A21]'}`}
+                        onClick=${() => setModel(ModelType.GEMMA_3_27B)}
+                        className=${`w-full p-3 border-2 text-left transition-all relative group flex items-start space-x-3 ${model === ModelType.GEMMA_3_27B ? 'bg-[#5C3A21] border-[#5C3A21] text-[#FFF9D2]' : 'bg-white/50 border-[#5C3A21]/30 text-[#5C3A21] hover:border-[#5C3A21]'}`}
                     >
-                        <${Cloud} size=${16} className=${model === ModelType.GEMINI_2_FREE ? 'text-[#FFF9D2]' : 'text-[#5C3A21]'} />
+                        <${BrainCircuit} size=${16} className=${model === ModelType.GEMMA_3_27B ? 'text-[#FFF9D2]' : 'text-[#5C3A21]'} />
                         <div>
-                            <div className="text-xs font-bold uppercase">Gemma 3 2B</div>
-                            <div className="text-[10px] opacity-70 mt-1">Ultra Fast.</div>
+                            <div className="text-xs font-bold uppercase">Gemma 3 27B</div>
+                            <div className="text-[10px] opacity-70 mt-1">Balanced Intelligence.</div>
                         </div>
-                        <div className="absolute top-2 right-2 text-[8px] bg-green-600 text-white px-1 font-bold">FREE</div>
+                        <div className="absolute top-2 right-2 text-[8px] bg-blue-600 text-white px-1 font-bold">1 CREDIT</div>
                     </button>
 
                     <button
                         type="button"
-                        onClick=${() => selectModel(ModelType.GEMMA_27B_FREE, 'openrouter')}
-                        className=${`w-full p-3 border-2 text-left transition-all relative group flex items-start space-x-3 ${model === ModelType.GEMMA_27B_FREE ? 'bg-[#5C3A21] border-[#5C3A21] text-[#FFF9D2]' : 'bg-white/50 border-[#5C3A21]/30 text-[#5C3A21] hover:border-[#5C3A21]'}`}
+                        onClick=${() => setModel(ModelType.GEMMA_4_31B)}
+                        className=${`w-full p-3 border-2 text-left transition-all relative group flex items-start space-x-3 ${model === ModelType.GEMMA_4_31B ? 'bg-[#5C3A21] border-[#5C3A21] text-[#FFF9D2]' : 'bg-white/50 border-[#5C3A21]/30 text-[#5C3A21] hover:border-[#5C3A21]'}`}
                     >
-                        <${BrainCircuit} size=${16} className=${model === ModelType.GEMMA_27B_FREE ? 'text-[#FFF9D2]' : 'text-[#5C3A21]'} />
+                        <${Zap} size=${16} className=${model === ModelType.GEMMA_4_31B ? 'text-[#FFF9D2]' : 'text-[#5C3A21]'} />
                         <div>
-                            <div className="text-xs font-bold uppercase">Gemma 3 27B</div>
-                            <div className="text-[10px] opacity-70 mt-1">High Intelligence.</div>
+                            <div className="text-xs font-bold uppercase">Gemma 4 31B</div>
+                            <div className="text-[10px] opacity-70 mt-1">Maximum Reasoning.</div>
                         </div>
-                        <div className="absolute top-2 right-2 text-[8px] bg-green-600 text-white px-1 font-bold">FREE</div>
+                        <div className="absolute top-2 right-2 text-[8px] bg-purple-600 text-white px-1 font-bold">3 CREDITS</div>
                     </button>
                     
-                    <div className="w-full p-3 border-2 border-[#5C3A21]/10 bg-white/10 opacity-50 flex items-start space-x-3 cursor-not-allowed">
-                        <${Zap} size=${16} className="text-[#5C3A21]/30" />
-                         <div>
-                            <div className="text-xs font-bold text-[#5C3A21]/30 uppercase">Gemini 3.0</div>
-                            <div className="text-[10px] text-[#5C3A21]/30 mt-1">Premium Engine.</div>
-                        </div>
-                    </div>
                 </div>
              </div>
 
              <div className="bg-[#5C3A21]/10 border-2 border-[#5C3A21]/20 p-4 text-xs font-medium text-[#5C3A21] leading-relaxed">
-                > Free models are routed via OpenRouter.<br/>
+                > Official Gemini API Powered.<br/>
                 > Generation time may vary.<br/>
-                > Credits required for premium features.
+                > Ensure you have sufficient credits.
              </div>
           </div>
 

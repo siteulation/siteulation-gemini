@@ -26,7 +26,6 @@ INDEX_PATH = os.path.join(BASE_DIR, 'index.html')
 
 # --- Env Vars ---
 API_KEY = os.environ.get("APIKEY", "").strip()
-OPENROUTER_KEY = os.environ.get("OPENROUTERKEY", "").strip()
 SUPABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY", "").strip() # Secret Service Role Key
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "").strip() # Public Anon Key
@@ -198,56 +197,6 @@ def serve_html_with_meta(title=None, description=None):
     html_content = html_content.replace(f'<title>{default_title}</title>', f'<title>{target_title}</title>')
     
     return html_content
-
-# --- OpenRouter Generation ---
-def generate_with_openrouter(prompt, model):
-    if not OPENROUTER_KEY:
-        raise Exception("OpenRouter Key not configured on server")
-
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    print(f"Calling OpenRouter URL: {url}")
-    
-    headers = {
-        "Authorization": f"Bearer {OPENROUTER_KEY[:10]}...",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://playsoul.com",
-        "X-Title": "PlaySOUL"
-    }
-    print(f"Headers: {headers}")
-    
-    # Reset headers for real call
-    headers["Authorization"] = f"Bearer {OPENROUTER_KEY}"
-    
-    payload = {
-        "model": model, 
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
-        "max_tokens": 10000, 
-        "temperature": 0.7
-    }
-
-    try:
-        response = requests.post(url, json=payload, headers=headers, timeout=120) 
-        
-        if response.status_code == 200:
-            data = response.json()
-            if 'choices' in data and len(data['choices']) > 0:
-                return data['choices'][0]['message']['content']
-            else:
-                 raise Exception("Invalid response structure from OpenRouter")
-        elif response.status_code == 429:
-             raise HTTPException(description="OpenRouter Rate Limit Exceeded", response=Response("AI Provider Busy", status=429))
-        else:
-            error_detail = response.text
-            print(f"OpenRouter API Error: {response.status_code} - {error_detail}")
-            raise Exception(f"OpenRouter API failed with status {response.status_code}: {error_detail}")
-
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        print(f"OpenRouter Generation Exception: {e}")
-        raise e
 
 # --- SocketIO Events ---
 
@@ -768,18 +717,17 @@ def generate_cart():
     data = request.json or {}
     prompt = data.get('prompt')
     name = data.get('name') or prompt
-    model_choice = data.get('model', 'gemini-3')
+    model_choice = data.get('model', 'gemma-3-27b')
     remix_code = data.get('remix_code') 
-    multiplayer_enabled = data.get('multiplayer', False)
     provider = data.get('provider', 'official') 
     is_mobile = data.get('is_mobile', False)
     
     if not prompt:
         return jsonify({"error": "Prompt required"}), 400
         
-    cost = 0
-    if provider == 'official':
-        cost = 1
+    cost = 1
+    if model_choice == 'gemma-4-31b':
+        cost = 3
         
     current_credits = user.get('credits', 0)
     
@@ -821,68 +769,35 @@ USER REQUEST:
 Return the updated project structure in the requested JSON format.
 """
 
-    if multiplayer_enabled:
-        multiplayer_prompt = """
-        
-*** IMPORTANT: MULTIPLAYER MODE ENABLED ***
-You MUST implement real-time multiplayer functionality using the provided WebSocket server.
-
-1.  **Include Socket.IO**: `<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>`
-2.  **Initialize**: `const socket = io({transports: ['websocket', 'polling']});`
-3.  **Rooms**: Generate a Room ID or let the user input one.
-4.  **Join**: `socket.emit('join', { room: myRoomId });`
-
-**Sending Data:**
-*   **State Updates** (Positions, Game Data): 
-    `socket.emit('state_update', { room: myRoomId, data: { ... } });`
-    *Server relays this to other players.*
-*   **Chat/Messages**: 
-    `socket.emit('chat_message', { room: myRoomId, username: 'User', text: 'Hello' });`
-    *Server relays this to other players.*
-
-**Receiving Data:**
-*   `socket.on('state_update', (data) => { ...updateGameState(data)... });`
-*   `socket.on('chat_message', (msg) => { ...appendMessageToChat(msg)... });`
-*   `socket.on('player_joined', (data) => { ... });`
-*   `socket.on('player_left', (data) => { ... });`
-"""
-        final_prompt += multiplayer_prompt
-        
     final_prompt += "\nGenerate the complete JSON structure."
 
     raw_output = ""
     model_used = ""
 
     try:
-        if provider == 'openrouter':
-            if model_choice == 'gemma-27b-free':
-                model_used = "google/gemma-3-27b-it:free"
-            else:
-                # Default to the 2B version for other free requests
-                model_used = "google/gemma-3n-e2b-it:free"
-
-            print(f"Generating with OpenRouter: {model_used}")
-            openrouter_prompt = f"{system_instruction}\n\n{final_prompt}"
-            raw_output = generate_with_openrouter(openrouter_prompt, model=model_used)
-            
+        if not ai_client:
+            raise Exception("Official API Key not configured on server")
+        
+        # Map to the best available official models
+        if model_choice == 'gemma-4-31b':
+            model_used = "gemini-3.1-pro-preview"
         else:
-            if not ai_client:
-                raise Exception("Official API Key not configured on server")
-            
             model_used = "gemini-3-flash-preview"
-            
-            response = ai_client.models.generate_content(
-                model=model_used,
-                contents=final_prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.7,
-                    response_mime_type="application/json"
-                )
+        
+        print(f"Generating with Gemini: {model_used} (as {model_choice})")
+        
+        response = ai_client.models.generate_content(
+            model=model_used,
+            contents=final_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=0.7,
+                response_mime_type="application/json"
             )
-            if not response.text:
-                raise Exception("AI returned empty response")
-            raw_output = response.text
+        )
+        if not response.text:
+            raise Exception("AI returned empty response")
+        raw_output = response.text
 
         cleaned_output = raw_output.strip()
         if cleaned_output.startswith("```json"):
