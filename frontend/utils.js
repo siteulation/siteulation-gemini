@@ -16,26 +16,42 @@ export const bundleProject = (files) => {
     const indexFile = files.find(f => f.name.toLowerCase() === 'index.html') || files[0];
     let htmlContent = indexFile.content;
 
+    const normalizePath = (path) => {
+        if (!path) return '';
+        // Strip ./ and leading /
+        return path.replace(/^\.\//, '').replace(/^\//, '').toLowerCase();
+    };
+
     // Helper to get file content by name
-    const getFileContent = (filename) => {
-        const file = files.find(f => f.name.toLowerCase() === filename.toLowerCase());
+    const getFileContent = (path) => {
+        const normalized = normalizePath(path);
+        const file = files.find(f => normalizePath(f.name) === normalized);
         return file ? file.content : null;
     };
 
-    // Replace <link rel="stylesheet" href="..."> with <style>...</style>
-    htmlContent = htmlContent.replace(/<link\s+[^>]*href=["'](.*?)["'][^>]*rel=["']stylesheet["'][^>]*>/gi, (match, href) => {
+    // Flexible CSS detector
+    htmlContent = htmlContent.replace(/<link\s+([^>]*?)>/gi, (match, attrs) => {
+        const isStylesheet = /rel=["']stylesheet["']/i.test(attrs);
+        if (!isStylesheet) return match;
+        
+        const hrefMatch = /href=["'](.*?)["']/i.exec(attrs);
+        const href = hrefMatch ? hrefMatch[1] : null;
+        
+        if (!href || href.startsWith('http') || href.startsWith('//')) return match;
+        
         const cssContent = getFileContent(href);
-        return cssContent ? `<style>\n${cssContent}\n</style>` : match;
+        return cssContent ? `<style data-original-href="${href}">\n${cssContent}\n</style>` : match;
     });
 
-    // Replace <script src="..."></script> with <script>...</script>
-    htmlContent = htmlContent.replace(/<script\s+[^>]*src=["'](.*?)["'][^>]*>\s*<\/script>/gi, (match, src) => {
-        // Skip external scripts (http/https)
-        if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('//')) {
-            return match;
-        }
+    // Flexible JS detector
+    htmlContent = htmlContent.replace(/<script\s+([^>]*?)>\s*<\/script>/gi, (match, attrs) => {
+        const srcMatch = /src=["'](.*?)["']/i.exec(attrs);
+        const src = srcMatch ? srcMatch[1] : null;
+        
+        if (!src || src.startsWith('http') || src.startsWith('//')) return match;
+        
         const jsContent = getFileContent(src);
-        return jsContent ? `<script>\n${jsContent}\n</script>` : match;
+        return jsContent ? `<script data-original-src="${src}">\n${jsContent}\n</script>` : match;
     });
 
     return htmlContent;

@@ -49,10 +49,6 @@ const ViewSite = ({ user }) => {
         
         setFiles(parsedFiles);
         
-        // Generate Bundled Preview
-        const bundled = bundleProject(parsedFiles);
-        setPreviewCode(bundled);
-        
         // Increment view count asynchronously
         api.request(`/api/carts/${id}/view`, { method: 'POST' }).catch(err => {
             console.warn("Failed to count view", err);
@@ -67,6 +63,14 @@ const ViewSite = ({ user }) => {
 
     fetchCart();
   }, [id]);
+
+  // Re-bundle when files change
+  useEffect(() => {
+     if (files.length > 0) {
+         const bundled = bundleProject(files);
+         setPreviewCode(bundled);
+     }
+  }, [files]);
 
   const handleAdminDelete = async () => {
     if (!window.confirm("Admin: Permanently delete this cart?")) return;
