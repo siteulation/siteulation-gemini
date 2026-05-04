@@ -776,9 +776,9 @@ Return the updated project structure in the requested JSON format.
 
     # Map to the official Gemma models available in AI Studio
     if model_choice == 'gemma-4-31b':
-        model_used = "gemma-4-31b"
+        model_used = "gemma-4-31b-it"
     else:
-        model_used = "gemma-3-27b"
+        model_used = "gemma-3-27b-it"
     
     print(f"Generating with Official Gemma API: {model_used} (Cost: {cost})")
     
