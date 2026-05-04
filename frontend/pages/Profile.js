@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
 import { SiteCard } from '../components/SiteCard.js';
 import { html } from '../utils.js';
-import { Loader2, User, Camera, Save, ArrowLeft, Globe, Calendar, LayoutGrid, Settings, LogOut } from 'lucide-react';
+import { Loader2, User as UserIcon, Camera, Save, ArrowLeft, Globe, Calendar, LayoutGrid, Settings, LogOut } from 'lucide-react';
 
 const Profile = ({ currentUser, setUser }) => {
     const { username } = useParams();
@@ -116,7 +116,7 @@ const Profile = ({ currentUser, setUser }) => {
                                         <img src=${profile.avatar_url} alt=${profile.username} className="w-full h-full object-cover" />
                                     ` : html`
                                         <div className="w-full h-full flex items-center justify-center text-[#FFF9D2]">
-                                            <${User} size=${64} />
+                                            <${UserIcon} size=${64} />
                                         </div>
                                     `}
                                     

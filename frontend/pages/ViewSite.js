@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File } from 'lucide-react';
+import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File, User as UserIcon } from 'lucide-react';
 import { html, bundleProject } from '../utils.js';
 import Editor from '@monaco-editor/react';
 
@@ -241,7 +241,7 @@ const ViewSite = ({ user }) => {
                         <img src=${cart.profiles.avatar_url} className="w-full h-full object-cover" />
                     ` : html`
                         <div className="w-full h-full flex items-center justify-center text-white">
-                            <${User} size=${14} />
+                            <${UserIcon} size=${14} />
                         </div>
                     `}
                 </div>

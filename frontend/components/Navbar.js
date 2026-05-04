@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { LogOut, Plus, User, Coins, Heart, X, ExternalLink, ShieldCheck, Check, Ban, Loader2, DollarSign } from 'lucide-react';
+import { LogOut, Plus, User as UserIcon, Coins, Heart, X, ExternalLink, ShieldCheck, Check, Ban, Loader2, DollarSign } from 'lucide-react';
 import { html } from '../utils.js';
 
 const Navbar = ({ user, setUser }) => {
@@ -144,7 +144,7 @@ const Navbar = ({ user, setUser }) => {
                             <img src=${user.avatar_url} alt=${user.username} className="w-full h-full object-cover" />
                         ` : html`
                             <div className="w-full h-full flex items-center justify-center text-white">
-                                <${User} size=${20} />
+                                <${UserIcon} size=${20} />
                             </div>
                         `}
                     </div>
