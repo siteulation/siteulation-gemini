@@ -769,47 +769,43 @@ USER REQUEST:
 Return the updated project structure in the requested JSON format.
 """
 
-    final_prompt += "\nGenerate the complete JSON structure."
+    final_prompt += "\nReturn only valid JSON structure."
 
-    raw_output = ""
-    model_used = ""
-
-    # Map to the official Gemma models available in AI Studio
-    if model_choice == 'gemma-4-31b':
-        model_used = "gemma-4-31b-it"
-    else:
-        model_used = "gemma-3-27b-it"
-    
+    model_used = "gemma-4-31b-it" if model_choice == 'gemma-4-31b' else "gemma-3-27b-it"
     print(f"Generating with Official Gemma API: {model_used} (Cost: {cost})")
     
     try:
         if not ai_client:
             raise Exception("Official API Key not configured on server")
         
-        # For Gemma models, we must merge system instructions into the prompt 
-        # because they don't support the 'system_instruction' parameter.
-        full_prompt = f"{system_instruction}\n\nUSER REQUEST: {final_prompt}\n\nRESPONSE INSTRUCTIONS: Return ONLY a valid JSON object matching the requested schema. No conversational filler."
+        # Merge system instruction into prompt for Gemma models
+        prompt_with_instructions = (
+            f"SYSTEM INSTRUCTION:\n{system_instruction}\n\n"
+            f"TASK:\n{final_prompt}\n\n"
+            f"OUTPUT REQUIREMENTS:\nReturn ONLY raw JSON matching the 'files' schema. No preamble. No code blocks."
+        )
         
         response = ai_client.models.generate_content(
             model=model_used,
-            contents=full_prompt,
+            contents=prompt_with_instructions,
             config=types.GenerateContentConfig(
                 temperature=0.7,
-                max_output_tokens=8192
+                max_output_tokens=5000 # Reduced to prevent memory/timeout issues
             )
         )
-        if not response.text:
-            raise Exception("AI returned empty response")
-        raw_output = response.text
-
-        cleaned_output = raw_output.strip()
-        if cleaned_output.startswith("```json"):
-            cleaned_output = cleaned_output[7:]
-        if cleaned_output.startswith("```"):
-            cleaned_output = cleaned_output[3:]
-        if cleaned_output.endswith("```"):
-            cleaned_output = cleaned_output[:-3]
         
+        if not response or not response.text:
+            raise Exception("AI returned empty response")
+            
+        raw_output = response.text.strip()
+        
+        # Handle Code Fencing
+        cleaned_output = raw_output
+        if "```json" in cleaned_output:
+            cleaned_output = cleaned_output.split("```json")[1].split("```")[0].strip()
+        elif "```" in cleaned_output:
+            cleaned_output = cleaned_output.split("```")[1].split("```")[0].strip()
+
         try:
             json_structure = json.loads(cleaned_output)
             if 'files' not in json_structure:
@@ -821,7 +817,8 @@ Return the updated project structure in the requested JSON format.
             final_code_storage = json.dumps(json_structure)
 
         except json.JSONDecodeError:
-            print("JSON Parsing Failed, falling back to raw string storage")
+            print(f"JSON Decode Error. Raw output starts with: {raw_output[:100]}")
+            # If it's not valid JSON, we wrap the whole thing in a single index.html
             fallback_struct = {
                 "files": [
                     {"name": "index.html", "content": raw_output}
