@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File, User as UserIcon, Terminal, Maximize2 } from 'lucide-react';
 import { html, bundleProject } from '../utils.js';
 import Editor from '@monaco-editor/react';
 
@@ -23,6 +23,26 @@ const ViewSite = ({ user }) => {
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [previewCode, setPreviewCode] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // Console State
+  const [consoleLogs, setConsoleLogs] = useState([]);
+  const [showConsole, setShowConsole] = useState(false);
+
+  useEffect(() => {
+    const handleConsoleMessage = (event) => {
+        if (event.data && event.data.type === 'CONSOLE_LOG') {
+            setConsoleLogs(prev => [...prev.slice(-99), {
+                id: Date.now() + Math.random(),
+                type: event.data.logType,
+                content: event.data.content,
+                timestamp: new Date().toLocaleTimeString()
+            }]);
+        }
+    };
+
+    window.addEventListener('message', handleConsoleMessage);
+    return () => window.removeEventListener('message', handleConsoleMessage);
+  }, []);
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -312,6 +332,23 @@ const ViewSite = ({ user }) => {
                 </button>
              </div>
            `}
+           <div className="flex items-center space-x-1 mx-2 border-r border-l border-white/20 px-2">
+                <button 
+                  onClick=${() => setShowConsole(!showConsole)} 
+                  className=${`p-1.5 rounded transition-colors ${showConsole ? 'bg-white text-[#A05A2C]' : 'text-white hover:bg-white/10'}`}
+                  title="Toggle Console"
+                >
+                  <${Terminal} size=${18} />
+                </button>
+                <${Link} 
+                  to=${`/fullpage/${cart.id}`}
+                  className="p-1.5 rounded text-white hover:bg-white/10 transition-colors"
+                  title="Full Screen Mode"
+                >
+                  <${Maximize2} size=${18} />
+                <//>
+           </div>
+
            <button 
                 onClick=${() => setShowCode(true)}
                 className="p-2 text-white/70 hover:text-white transition-colors" 
@@ -322,19 +359,44 @@ const ViewSite = ({ user }) => {
         </div>
       </div>
 
-      <!-- Canvas -->
-      <div className="flex-1 overflow-hidden flex justify-center items-center p-4 md:p-8">
+      <!-- Canvas Area -->
+      <div className="flex-1 overflow-hidden flex flex-col items-center justify-center p-4 md:p-6 relative">
         <div 
           className="bg-white h-full transition-all duration-500 shadow-2xl overflow-hidden border-8 border-[#5C3A21] rounded-lg relative"
           style=${getViewportStyle()}
         >
           <iframe
             srcDoc=${previewCode}
+            key=${previewCode.length}
             title=${`Site ${cart.id}`}
             className="w-full h-full border-0"
             sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin allow-pointer-lock"
           />
         </div>
+
+        <!-- Console Overlay -->
+        ${showConsole && html`
+            <div className="absolute bottom-6 right-6 w-full max-w-lg h-64 bg-black/90 text-green-400 font-mono text-[10px] p-2 border-2 border-[#5C3A21] flex flex-col shadow-2xl z-50 rounded select-text">
+                <div className="flex items-center justify-between border-b border-green-900/50 pb-1 mb-1 shrink-0">
+                    <span className="font-bold flex items-center space-x-1 uppercase">
+                        <${Terminal} size=${10} />
+                        <span>Project Console</span>
+                    </span>
+                    <div className="flex items-center space-x-2">
+                        <button onClick=${() => setConsoleLogs([])} className="hover:text-white uppercase">[Clear]</button>
+                        <button onClick=${() => setShowConsole(false)} className="hover:text-white uppercase">[X]</button>
+                    </div>
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar">
+                    ${consoleLogs.length === 0 ? html`<div className="opacity-40 italic">Waiting for logs...</div>` : consoleLogs.map(log => html`
+                        <div key=${log.id} className=${`flex border-b border-green-900/10 last:border-0 py-0.5 ${log.type === 'error' ? 'text-red-400' : log.type === 'warn' ? 'text-yellow-400' : ''}`}>
+                            <span className="opacity-40 shrink-0 mr-2">[${log.timestamp}]</span>
+                            <span className="break-all whitespace-pre-wrap">${log.content}</span>
+                        </div>
+                    `)}
+                </div>
+            </div>
+        `}
       </div>
 
       <!-- Code Viewer Modal -->

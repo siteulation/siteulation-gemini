@@ -10,13 +10,14 @@
     "start": "gunicorn -w 4 -b 0.0.0.0:3000 --timeout 120 app:app"
   },
   "dependencies": {
-    "react": "18.2.0",
-    "lucide-react": "0.294.0",
-    "react-router-dom": "6.20.0",
+    "@monaco-editor/react": "4.6.0",
     "@supabase/supabase-js": "2.39.0",
     "htm": "3.1.1",
+    "lucide-react": "0.294.0",
+    "motion": "^12.38.0",
+    "react": "18.2.0",
     "react-dom": "^19.2.3",
-    "@monaco-editor/react": "4.6.0"
+    "react-router-dom": "6.20.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
