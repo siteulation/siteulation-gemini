@@ -59,16 +59,20 @@ AUTH_CACHE_TTL = 60 # 1 minute
 
 # --- Helpers ---
 def get_db_headers():
+    # Use Service Role Key if available, fallback to Anon
+    key = SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY
     return {
-        "apikey": SUPABASE_SERVICE_ROLE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "apikey": key,
+        "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
         "Prefer": "return=representation"
     }
 
 def get_auth_headers():
+    # Use Anon Key if available, fallback to Service Role
+    key = SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY
     return {
-        "apikey": SUPABASE_ANON_KEY,
+        "apikey": key,
         "Content-Type": "application/json"
     }
 
@@ -141,6 +145,7 @@ def verify_token(req):
                     else:
                         update_credits(user_id, credits, reset_date=today)
             else:
+                print(f"Profile fetch failed or empty for {user_id}: {prof_resp.status_code} - {prof_resp.text}")
                 # Profile missing? Create it.
                 create_url = f"{SUPABASE_URL}/rest/v1/profiles"
                 requests.post(create_url, json={
@@ -450,6 +455,11 @@ def get_credit_requests():
     # Get pending requests
     url = f"{SUPABASE_URL}/rest/v1/credit_requests?status=eq.pending&order=created_at.desc"
     resp = requests.get(url, headers=get_db_headers())
+    
+    if resp.status_code >= 400:
+        print(f"DB Error (get_carts): {resp.status_code} - {resp.text}")
+        return jsonify({"error": "Database query failed", "details": resp.json() if resp.headers.get('content-type') == 'application/json' else resp.text}), resp.status_code
+
     return jsonify(resp.json()), resp.status_code
 
 @app.route('/api/admin/credits/approve', methods=['POST'])
@@ -647,10 +657,11 @@ def get_carts():
     url += '&limit=50'
 
     resp = requests.get(url, headers=get_db_headers())
-    try:
-        return jsonify(resp.json()), resp.status_code
-    except:
-        return jsonify({"error": "DB Error", "details": resp.text}), 500
+    if resp.status_code >= 400:
+        print(f"DB Error (get_carts): {resp.status_code} - {resp.text}")
+        return jsonify({"error": "Database query failed", "details": resp.json() if resp.headers.get('content-type') == 'application/json' else resp.text}), resp.status_code
+    
+    return jsonify(resp.json()), resp.status_code
 
 @app.route('/api/carts/<id>', methods=['GET'])
 def get_cart_by_id(id):
@@ -658,6 +669,11 @@ def get_cart_by_id(id):
 
     url = f"{SUPABASE_URL}/rest/v1/carts?select=*,profiles(username,avatar_url)&id=eq.{id}"
     resp = requests.get(url, headers=get_db_headers())
+    
+    if resp.status_code >= 400:
+        print(f"DB Error (get_cart_by_id): {resp.status_code} - {resp.text}")
+        return jsonify({"error": "Failed to fetch cart", "details": resp.text}), resp.status_code
+
     data = resp.json()
     if not data:
         return jsonify({"error": "Cart not found"}), 404

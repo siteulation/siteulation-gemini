@@ -9,7 +9,9 @@ async function handleResponse(response) {
   if (contentType && contentType.includes('application/json')) {
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.error || data.msg || data.error_description || 'Request failed');
+      // Supabase often uses 'message' instead of 'error'
+      const errorMsg = data.error || data.msg || data.message || data.error_description || 'Request failed';
+      throw new Error(errorMsg);
     }
     return data;
   } else {
