@@ -780,9 +780,9 @@ Return the updated project structure in the requested JSON format.
         
         # Merge system instruction into prompt for Gemma models
         prompt_with_instructions = (
-            f"SYSTEM INSTRUCTION:\n{system_instruction}\n\n"
-            f"TASK:\n{final_prompt}\n\n"
-            f"OUTPUT REQUIREMENTS:\nReturn ONLY raw JSON matching the 'files' schema. No preamble. No code blocks."
+            f"SYSTEM:\n{system_instruction}\n\n"
+            f"GOAL:\n{final_prompt}\n\n"
+            f"OUTPUT:\nReturn ONLY raw JSON files schema. No code blocks. No intro. Be concise."
         )
         
         response = ai_client.models.generate_content(
@@ -790,14 +790,20 @@ Return the updated project structure in the requested JSON format.
             contents=prompt_with_instructions,
             config=types.GenerateContentConfig(
                 temperature=0.7,
-                max_output_tokens=5000 # Reduced to prevent memory/timeout issues
+                max_output_tokens=4000
             )
         )
         
-        if not response or not response.text:
-            raise Exception("AI returned empty response")
+        if not response:
+            raise Exception("AI returned no response object")
             
-        raw_output = response.text.strip()
+        try:
+             raw_output = response.text.strip()
+        except:
+             if response.candidates and response.candidates[0].content.parts:
+                 raw_output = response.candidates[0].content.parts[0].text.strip()
+             else:
+                 raise Exception("AI response blocked by safety filters or empty content.")
         
         # Handle Code Fencing
         cleaned_output = raw_output
@@ -817,11 +823,11 @@ Return the updated project structure in the requested JSON format.
             final_code_storage = json.dumps(json_structure)
 
         except json.JSONDecodeError:
-            print(f"JSON Decode Error. Raw output starts with: {raw_output[:100]}")
+            print(f"JSON Decode Error. Content starts with: {cleaned_output[:300]}")
             # If it's not valid JSON, we wrap the whole thing in a single index.html
             fallback_struct = {
                 "files": [
-                    {"name": "index.html", "content": raw_output}
+                    {"name": "index.html", "content": cleaned_output}
                 ]
             }
             final_code_storage = json.dumps(fallback_struct)

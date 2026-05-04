@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "gunicorn -w 4 -b 0.0.0.0:3000 --timeout 120 app:app"
   },
   "dependencies": {
     "react": "18.2.0",
