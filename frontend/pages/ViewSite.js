@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File, User as UserIcon, Sparkles } from 'lucide-react';
 import { html, bundleProject } from '../utils.js';
 import Editor from '@monaco-editor/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 const ViewSite = ({ user }) => {
   const { id } = useParams();
@@ -13,6 +14,11 @@ const ViewSite = ({ user }) => {
   const [viewport, setViewport] = useState('desktop');
   const [adminActionLoading, setAdminActionLoading] = useState(false);
   
+  // Forking State
+  const [isForking, setIsForking] = useState(false);
+  const [remixPrompt, setRemixPrompt] = useState('');
+  const [isGeneratingRemix, setIsGeneratingRemix] = useState(false);
+
   // Renaming State
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState('');
@@ -128,13 +134,33 @@ const ViewSite = ({ user }) => {
   };
   
   const handleRemix = () => {
-      navigate('/create', { 
-          state: { 
-              remixCode: cart.code,
-              originalName: cart.name || cart.prompt,
-              isListed: cart.is_listed
-          }
-      });
+    setIsForking(true);
+  };
+
+  const handleSubmitFork = async (e) => {
+    if (e) e.preventDefault();
+    if (!remixPrompt.trim() && !window.confirm("Remix without changes?")) return;
+    
+    setIsGeneratingRemix(true);
+    try {
+        const data = await api.request('/api/carts/generate', {
+            method: 'POST',
+            body: JSON.stringify({
+                prompt: remixPrompt || "Original remix",
+                remix_code: cart.code
+            })
+        });
+        
+        if (data.cart) {
+            navigate(`/view/${data.cart.id}`);
+            setIsForking(false);
+            setRemixPrompt('');
+        }
+    } catch (err) {
+        alert(err.message || "Failed to generate remix");
+    } finally {
+        setIsGeneratingRemix(false);
+    }
   };
   
   const handleRename = async () => {
@@ -226,7 +252,7 @@ const ViewSite = ({ user }) => {
   };
 
   return html`
-    <div className="flex flex-col h-screen pt-16" style=${{
+    <div className=${`flex flex-col h-screen pt-16 transition-all duration-500 ${isForking ? 'blur-[8px] scale-[0.98] pointer-events-none' : ''}`} style=${{
         backgroundColor: '#2563eb',
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.4'/%3E%3C/svg%3E")`,
         backgroundSize: '120px 30px'
@@ -454,6 +480,81 @@ const ViewSite = ({ user }) => {
           </div>
         </div>
       `}
+
+      <${AnimatePresence}>
+        ${isForking && html`
+          <${motion.div}
+            initial=${{ y: '100%' }}
+            animate=${{ y: 0 }}
+            exit=${{ y: '100%' }}
+            transition=${{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed bottom-0 left-0 right-0 z-[200] flex items-end justify-center p-4 h-screen bg-black/40 pointer-events-auto"
+            onClick=${() => !isGeneratingRemix && setIsForking(false)}
+          >
+            <div 
+                className="bg-[#FFF9D2] border-t-8 md:border-8 border-[#5C3A21] w-full max-w-2xl rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden p-6 relative bottom-0 pointer-events-auto"
+                onClick=${e => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-[#A05A2C] rounded-lg">
+                            <${GitFork} size=${24} className="text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-black text-[#5C3A21] uppercase tracking-tight">Fork Project</h2>
+                            <p className="text-xs text-[#A05A2C] font-bold opacity-70">Add your twist to "${cart.name || cart.prompt}"</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick=${() => setIsForking(false)} 
+                        disabled=${isGeneratingRemix}
+                        className="p-2 text-[#5C3A21] hover:bg-black/5 rounded-full transition-colors"
+                    >
+                        <${X} size=${24} />
+                    </button>
+                </div>
+
+                <form onSubmit=${handleSubmitFork} className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-[#5C3A21] opacity-60">What changes do you want?</label>
+                        <textarea
+                            value=${remixPrompt}
+                            onChange=${e => setRemixPrompt(e.target.value)}
+                            placeholder="e.g., Make it neon themed, add a physics engine, or change the layout..."
+                            className="w-full bg-white border-4 border-[#5C3A21] p-4 text-[#5C3A21] font-bold h-32 focus:ring-0 focus:border-[#A05A2C] transition-all resize-none shadow-[4px_4px_0px_#5C3A21]"
+                            disabled=${isGeneratingRemix}
+                            autoFocus
+                        />
+                    </div>
+
+                    <div className="flex items-center justify-end space-x-3 pt-2">
+                        <button
+                            type="button"
+                            onClick=${() => setIsForking(false)}
+                            disabled=${isGeneratingRemix}
+                            className="px-6 py-3 font-black text-[#5C3A21] uppercase tracking-widest text-xs hover:bg-black/5 rounded group"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled=${isGeneratingRemix}
+                            className="px-8 py-3 bg-[#A05A2C] text-white font-black uppercase tracking-widest text-xs border-4 border-[#5C3A21] shadow-[4px_4px_0px_#5C3A21] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all flex items-center space-x-2 group h-12 min-w-[160px] justify-center"
+                        >
+                            ${isGeneratingRemix ? html`
+                                <${Loader2} className="animate-spin" size=${16} />
+                                <span>Generating...</span>
+                            ` : html`
+                                <${Sparkles} size=${16} />
+                                <span>Forge Fork</span>
+                            `}
+                        </button>
+                    </div>
+                </form>
+            </div>
+          <//>
+        `}
+      <//>
     </div>
   `;
 };
