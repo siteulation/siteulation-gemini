@@ -657,7 +657,7 @@ def get_carts():
     url += '&limit=50'
 
     # Robust query with logging
-    print(f"Fetching carts: Tab={activeTab}, User={filter_user_id}, URL={url}")
+    print(f"Fetching carts: Sort={sort_mode}, User={filter_user_id}, URL={url}")
     
     resp = requests.get(url, headers=get_db_headers())
     

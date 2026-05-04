@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, Trash2, Loader2, Lock, Cpu, User } from 'lucide-react';
+import { Eye, Trash2, Loader2, Lock, Cpu, User as UserIcon } from 'lucide-react';
 import { html } from '../utils.js';
 import { api } from '../services/api.js';
 
@@ -87,7 +87,7 @@ export const SiteCard = ({ cart, currentUser, onDelete }) => {
                                 <img src=${cart.profiles.avatar_url} className="w-full h-full object-cover" />
                             ` : html`
                                 <div className="w-full h-full flex items-center justify-center text-[#FFF9D2]">
-                                    <${User} size=${10} />
+                                    <${UserIcon} size=${10} />
                                 </div>
                             `}
                         </div>
