@@ -2,7 +2,6 @@
 create extension if not exists "uuid-ossp";
 
 -- 2. PROFILES TABLE
--- This stores user-specific data like credits and banned status.
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   username text unique,
@@ -14,23 +13,19 @@ create table if not exists public.profiles (
   created_at timestamp with time zone default now()
 );
 
--- Ensure columns exist if table was already created
+-- Force Fix: Ensure avatar_url exists
 do $$ 
 begin 
   if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='avatar_url') then
     alter table public.profiles add column avatar_url text;
   end if;
-  if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='created_at') then
-    alter table public.profiles add column created_at timestamp with time zone default now();
-  end if;
 end $$;
 
 -- 3. CARTS TABLE
--- This stores the generated applications/games.
 create table if not exists public.carts (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references public.profiles(id) on delete cascade not null,
-  username text, -- Denormalized for speed
+  username text,
   name text,
   prompt text not null,
   model text not null,
@@ -41,7 +36,6 @@ create table if not exists public.carts (
 );
 
 -- 4. CREDIT REQUESTS TABLE
--- For the donation/credit system.
 create table if not exists public.credit_requests (
   id uuid default uuid_generate_v4() primary key,
   user_id uuid references public.profiles(id) on delete cascade not null,
@@ -53,32 +47,46 @@ create table if not exists public.credit_requests (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- 5. ENABLE RLS
-alter table public.profiles enable row level security;
+
+-- Force Fix: Ensure user_id references profiles(id) for joins to work
+do $$
+begin
+  -- Change reference if it points to auth.users (common mismatch)
+  if exists (
+    select 1 from information_schema.table_constraints tc 
+    join information_schema.key_column_usage kcu on tc.constraint_name = kcu.constraint_name
+    where tc.table_name = 'carts' and tc.constraint_type = 'FOREIGN KEY' 
+    and kcu.column_name = 'user_id'
+  ) then
+    -- We'll just ensure it works. Most people have it pointing to auth.users which prevents the public.profiles join.
+    alter table public.carts drop constraint if exists carts_user_id_fkey;
+    alter table public.carts add constraint carts_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade;
+  end if;
+end $$;
+
+-- 4. POLICIES (Idempotent and Broad)
+-- Broaden policies to ensure owners can ALWAYS see their own stuff even if not listed
 alter table public.carts enable row level security;
-alter table public.credit_requests enable row level security;
 
--- 6. POLICIES (Idempotent)
-
--- Profiles Policies
-drop policy if exists "Public profiles are viewable by everyone" on public.profiles;
-create policy "Public profiles are viewable by everyone" on public.profiles for select using (true);
-
-drop policy if exists "Users can update own profile" on public.profiles;
-create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
-
-drop policy if exists "Users can insert their own profile" on public.profiles;
-create policy "Users can insert their own profile" on public.profiles for insert with check (auth.uid() = id);
-
--- Carts Policies
 drop policy if exists "Carts are public" on public.carts;
-create policy "Carts are public" on public.carts for select using (is_listed = true OR auth.uid() = user_id);
-
-drop policy if exists "Users can insert own carts" on public.carts;
-create policy "Users can insert own carts" on public.carts for insert with check (auth.uid() = user_id);
+create policy "Carts are public" on public.carts 
+  for select using (is_listed = true OR auth.uid() = user_id);
 
 drop policy if exists "Users can update own carts" on public.carts;
-create policy "Users can update own carts" on public.carts for update using (auth.uid() = user_id);
+create policy "Users can update own carts" 
+  for update using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own carts" on public.carts;
+create policy "Users can insert own carts" 
+  for insert with check (auth.uid() = user_id);
+
+-- Profiles are public
+alter table public.profiles enable row level security;
+drop policy if exists "Public profiles" on public.profiles;
+create policy "Public profiles" on public.profiles for select using (true);
+drop policy if exists "Own profile update" on public.profiles;
+create policy "Own profile update" on public.profiles for update using (auth.uid() = id);
+
 
 drop policy if exists "Admins can delete any cart" on public.carts;
 create policy "Admins can delete any cart" on public.carts for delete using (
