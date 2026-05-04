@@ -846,7 +846,7 @@ Return the updated project structure in the requested JSON format.
             "model": model_used,
             "code": final_code_storage,
             "views": 0,
-            "is_listed": True 
+            "is_listed": False 
         }
         db_resp = requests.post(url, json=payload, headers=get_db_headers())
         
