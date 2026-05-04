@@ -84,9 +84,9 @@ const Auth = ({ setUser }) => {
 
   return html`
     <div className="min-h-screen flex items-center justify-center p-6 overflow-hidden" style=${{
-        backgroundColor: '#2563eb',
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.4'/%3E%3C/svg%3E")`,
-        backgroundSize: '120px 30px'
+        backgroundColor: '#3D2B1F',
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.05'/%3E%3C/svg%3E")`,
+        backgroundSize: '240px 60px'
     }}>
       <div className="w-full max-w-sm relative z-10">
         <div className="bg-[#FFF9D2] border-4 border-[#5C3A21] p-8 shadow-2xl relative transform -rotate-1">

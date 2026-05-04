@@ -31,12 +31,12 @@ const App = () => {
   }, []);
 
   if (loading) {
-    return html`<div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Initializing System...</div>`;
+    return html`<div className="min-h-screen bg-[#3D2B1F] flex items-center justify-center text-white/50 font-mono text-xs uppercase tracking-widest">Initializing Soul...</div>`;
   }
 
   return html`
     <${Router}>
-      <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans selection:bg-primary-500 selection:text-white">
+      <div className="min-h-screen bg-[#3D2B1F] text-white flex flex-col font-sans selection:bg-orange-500/30">
         <${Navbar} user=${user} setUser=${setUser} />
         <main className="flex-1">
           <${Routes}>

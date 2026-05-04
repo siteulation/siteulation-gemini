@@ -46,9 +46,9 @@ const Home = ({ user }) => {
 
   return html`
     <div className="min-h-screen pt-24 pb-20 overflow-x-hidden" style=${{
-        backgroundColor: '#2563eb',
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.4'/%3E%3C/svg%3E")`,
-        backgroundSize: '120px 30px'
+        backgroundColor: '#3D2B1F',
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.05'/%3E%3C/svg%3E")`,
+        backgroundSize: '240px 60px'
     }}>
       <div className="container mx-auto px-4 relative z-10">
         

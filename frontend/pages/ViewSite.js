@@ -184,17 +184,17 @@ const ViewSite = ({ user }) => {
 
   if (loading) {
     return html`
-      <div className="h-screen flex items-center justify-center bg-slate-950">
-        <${Loader2} className="animate-spin text-primary-500" size=${48} />
+      <div className="h-screen flex items-center justify-center bg-[#3D2B1F]">
+        <${Loader2} className="animate-spin text-white/20" size=${48} />
       </div>
     `;
   }
 
   if (!cart) {
     return html`
-      <div className="h-screen flex flex-col items-center justify-center text-slate-400 bg-slate-950">
-        <p className="text-xl mb-4">Cart data corrupted or missing.</p>
-        <${Link} to="/" className="text-primary-400 hover:underline">Return to Hub<//>
+      <div className="h-screen flex flex-col items-center justify-center text-white/40 bg-[#3D2B1F]">
+        <p className="text-xl mb-4 uppercase font-bold tracking-tighter italic">Soul Corrupted</p>
+        <${Link} to="/" className="text-white hover:underline uppercase text-xs font-bold tracking-widest">Return to Hub<//>
       </div>
     `;
   }
@@ -218,9 +218,9 @@ const ViewSite = ({ user }) => {
 
   return html`
     <div className="flex flex-col h-screen pt-16" style=${{
-        backgroundColor: '#2563eb',
-        backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.4'/%3E%3C/svg%3E")`,
-        backgroundSize: '120px 30px'
+        backgroundColor: '#3D2B1F',
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.05'/%3E%3C/svg%3E")`,
+        backgroundSize: '240px 60px'
     }}>
       <!-- Toolbar -->
       <div className="bg-[#A05A2C] border-b-4 border-[#5C3A21] px-4 h-14 flex items-center justify-between shrink-0 shadow-lg">
