@@ -54,5 +54,51 @@ export const bundleProject = (files) => {
         return jsContent ? `<script data-original-src="${src}">\n${jsContent}\n</script>` : match;
     });
 
+    // Inject Console Interceptor
+    const consoleInterceptor = `
+    <script>
+        (function() {
+            const originalConsole = {
+                log: console.log,
+                warn: console.warn,
+                error: console.error,
+                info: console.info
+            };
+            
+            function sendToParent(type, args) {
+                window.parent.postMessage({
+                    type: 'iframe_console',
+                    logType: type,
+                    args: Array.from(args).map(arg => {
+                        try {
+                            return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+                        } catch(e) {
+                            return String(arg);
+                        }
+                    })
+                }, '*');
+            }
+
+            console.log = function() { sendToParent('log', arguments); originalConsole.log.apply(console, arguments); };
+            console.warn = function() { sendToParent('warn', arguments); originalConsole.warn.apply(console, arguments); };
+            console.error = function() { sendToParent('error', arguments); originalConsole.error.apply(console, arguments); };
+            console.info = function() { sendToParent('info', arguments); originalConsole.info.apply(console, arguments); };
+            
+            window.onerror = function(message, source, lineno, colno, error) {
+                sendToParent('error', [message + ' (at ' + lineno + ':' + colno + ')']);
+            };
+        })();
+    </script>
+    `;
+
+    // Insert interceptor at the beginning of <head> or <html>
+    if (htmlContent.includes('<head>')) {
+        htmlContent = htmlContent.replace('<head>', '<head>' + consoleInterceptor);
+    } else if (htmlContent.includes('<html>')) {
+        htmlContent = htmlContent.replace('<html>', '<html>' + consoleInterceptor);
+    } else {
+        htmlContent = consoleInterceptor + htmlContent;
+    }
+
     return htmlContent;
 };

@@ -24,6 +24,34 @@ const ViewSite = ({ user }) => {
   const [previewCode, setPreviewCode] = useState('');
   const [copied, setCopied] = useState(false);
 
+  // Console Logs State
+  const [logs, setLogs] = useState([]);
+  const [showConsole, setShowConsole] = useState(false);
+  const consoleRef = React.useRef(null);
+
+  useEffect(() => {
+    if (showConsole && consoleRef.current) {
+        consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+    }
+  }, [logs, showConsole]);
+
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'iframe_console') {
+        const { logType, args } = event.data;
+        setLogs(prev => [...prev, {
+            id: Date.now() + Math.random(),
+            type: logType,
+            content: args.join(' '),
+            timestamp: new Date().toLocaleTimeString()
+        }].slice(-100)); // Keep last 100 logs
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   useEffect(() => {
     const fetchCart = async () => {
       if (!id) return;
@@ -69,6 +97,7 @@ const ViewSite = ({ user }) => {
      if (files.length > 0) {
          const bundled = bundleProject(files);
          setPreviewCode(bundled);
+         setLogs([]); // Clear console on reload/change
      }
   }, [files]);
 
@@ -334,6 +363,37 @@ const ViewSite = ({ user }) => {
             className="w-full h-full border-0"
             sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin allow-pointer-lock"
           />
+          
+          <!-- Console Toggle Tab -->
+          <button 
+             onClick=${() => setShowConsole(!showConsole)}
+             className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 text-white text-[10px] font-bold uppercase tracking-widest rounded border border-white/20 hover:bg-black transition-colors z-10"
+          >
+             ${showConsole ? 'Hide Console' : 'Show Console'}
+          </button>
+
+          <!-- Docked Console Overlay -->
+          ${showConsole && html`
+            <div className="absolute bottom-0 left-0 right-0 h-48 bg-black/95 text-green-400 font-mono text-[10px] border-t-2 border-[#5C3A21] flex flex-col z-20 animate-in slide-in-from-bottom duration-300">
+                <div className="flex items-center justify-between p-1 bg-white/10 border-b border-white/10">
+                    <span className="px-2 uppercase font-bold tracking-tighter opacity-70">Project Console</span>
+                    <div className="flex items-center space-x-2">
+                        <button onClick=${() => setLogs([])} className="hover:text-white px-2">Clear</button>
+                        <button onClick=${() => setShowConsole(false)} className="hover:text-white px-2 text-xs"><${X} size=${12} /><//>
+                    </div>
+                </div>
+                <div ref=${consoleRef} className="flex-1 overflow-y-auto p-2 space-y-1">
+                    ${logs.length === 0 ? html`
+                        <div className="text-white/30 italic">No logs yet...</div>
+                    ` : logs.map(log => html`
+                        <div key=${log.id} className=${`flex space-x-2 ${log.type === 'error' ? 'text-red-400' : log.type === 'warn' ? 'text-yellow-400' : 'text-green-400'}`}>
+                            <span className="opacity-40 shrink-0">[${log.timestamp}]</span>
+                            <span className="break-all">${log.content}</span>
+                        </div>
+                    `)}
+                </div>
+            </div>
+          `}
         </div>
       </div>
 
