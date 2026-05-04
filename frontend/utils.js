@@ -29,45 +29,6 @@ export const bundleProject = (files) => {
         return file ? file.content : null;
     };
 
-    // Capture console logs and send to parent
-    const consoleInterceptor = `
-        <script>
-            (function() {
-                const originalLog = console.log;
-                const originalError = console.error;
-                const originalWarn = console.warn;
-                
-                function sendToParent(type, args) {
-                    window.parent.postMessage({
-                        type: 'CONSOLE_LOG',
-                        logType: type,
-                        content: Array.from(args).map(arg => {
-                            try {
-                                return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
-                            } catch(e) { return String(arg); }
-                        }).join(' ')
-                    }, '*');
-                }
-
-                console.log = (...args) => { originalLog(...args); sendToParent('log', args); };
-                console.error = (...args) => { originalError(...args); sendToParent('error', args); };
-                console.warn = (...args) => { originalWarn(...args); sendToParent('warn', args); };
-
-                window.onerror = (msg, url, line, col, error) => {
-                    sendToParent('error', [\`Error: \${msg} at \${line}:\${col}\`]);
-                    return false;
-                };
-            })();
-        </script>
-    `;
-
-    // Insert interceptor at the start of head
-    if (htmlContent.includes('<head>')) {
-        htmlContent = htmlContent.replace('<head>', '<head>' + consoleInterceptor);
-    } else {
-        htmlContent = consoleInterceptor + htmlContent;
-    }
-
     // Flexible CSS detector
     htmlContent = htmlContent.replace(/<link\s+([^>]*?)>/gi, (match, attrs) => {
         const isStylesheet = /rel=["']stylesheet["']/i.test(attrs);

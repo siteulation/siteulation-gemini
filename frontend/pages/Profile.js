@@ -75,19 +75,19 @@ const Profile = ({ currentUser, setUser }) => {
 
     if (loading) {
         return html`
-            <div className="min-h-screen pt-24 flex items-center justify-center bg-[#3D2B1F]">
-                <${Loader2} className="animate-spin text-white/20" size=${48} />
+            <div className="min-h-screen pt-24 flex items-center justify-center bg-[#2563eb]">
+                <${Loader2} className="animate-spin text-white" size=${48} />
             </div>
         `;
     }
 
     if (error) {
         return html`
-            <div className="min-h-screen pt-24 flex flex-col items-center justify-center bg-[#3D2B1F] text-white px-4">
+            <div className="min-h-screen pt-24 flex flex-col items-center justify-center bg-[#2563eb] text-white px-4">
                 <div className="bg-white/10 backdrop-blur-md p-8 rounded-lg border-2 border-white/20 text-center max-w-md">
                     <h2 className="text-2xl font-bold mb-4 uppercase tracking-widest">Profile Not Found</h2>
                     <p className="mb-6 opacity-80 font-medium">${error}</p>
-                    <${Link} to="/" className="inline-flex items-center space-x-2 bg-white text-[#5C3A21] px-6 py-2 rounded font-bold uppercase tracking-wider hover:bg-blue-50 transition-colors">
+                    <${Link} to="/" className="inline-flex items-center space-x-2 bg-white text-blue-600 px-6 py-2 rounded font-bold uppercase tracking-wider hover:bg-blue-50 transition-colors">
                         <${ArrowLeft} size=${16} />
                         <span>Back to Map</span>
                     <//>
@@ -98,9 +98,9 @@ const Profile = ({ currentUser, setUser }) => {
 
     return html`
         <div className="min-h-screen pt-24 pb-20 overflow-x-hidden" style=${{
-            backgroundColor: '#3D2B1F',
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.05'/%3E%3C/svg%3E")`,
-            backgroundSize: '240px 60px'
+            backgroundColor: '#2563eb',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.4'/%3E%3C/svg%3E")`,
+            backgroundSize: '120px 30px'
         }}>
             <div className="container mx-auto px-4 relative z-10">
                 

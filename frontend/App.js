@@ -6,7 +6,6 @@ import Home from './pages/Home.js';
 import Auth from './pages/Auth.js';
 import CreateSite from './pages/CreateSite.js';
 import ViewSite from './pages/ViewSite.js';
-import FullpageView from './pages/FullpageView.js';
 import Profile from './pages/Profile.js';
 import { html } from './utils.js';
 
@@ -31,12 +30,12 @@ const App = () => {
   }, []);
 
   if (loading) {
-    return html`<div className="min-h-screen bg-[#3D2B1F] flex items-center justify-center text-white/50 font-mono text-xs uppercase tracking-widest">Initializing Soul...</div>`;
+    return html`<div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Initializing System...</div>`;
   }
 
   return html`
     <${Router}>
-      <div className="min-h-screen bg-[#3D2B1F] text-white flex flex-col font-sans selection:bg-orange-500/30">
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans selection:bg-primary-500 selection:text-white">
         <${Navbar} user=${user} setUser=${setUser} />
         <main className="flex-1">
           <${Routes}>
@@ -50,7 +49,6 @@ const App = () => {
               element=${user ? html`<${CreateSite} />` : html`<${Navigate} to="/auth" replace />`} 
             />
             <${Route} path="/site/:id" element=${html`<${ViewSite} user=${user} />`} />
-            <${Route} path="/fullpage/:id" element=${html`<${FullpageView} />`} />
             <${Route} path="/profile/:username" element=${html`<${Profile} currentUser=${user} setUser=${setUser} />`} />
             <${Route} path="/cart/:id" element=${html`<${Navigate} to="/site/:id" replace />`} />
           <//>
