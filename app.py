@@ -786,13 +786,16 @@ Return the updated project structure in the requested JSON format.
         if not ai_client:
             raise Exception("Official API Key not configured on server")
         
+        # For Gemma models, we must merge system instructions into the prompt 
+        # because they don't support the 'system_instruction' parameter.
+        full_prompt = f"{system_instruction}\n\nUSER REQUEST: {final_prompt}\n\nRESPONSE INSTRUCTIONS: Return ONLY a valid JSON object matching the requested schema. No conversational filler."
+        
         response = ai_client.models.generate_content(
             model=model_used,
-            contents=final_prompt,
+            contents=full_prompt,
             config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
                 temperature=0.7,
-                response_mime_type="application/json"
+                max_output_tokens=8192
             )
         )
         if not response.text:
