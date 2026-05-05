@@ -29,8 +29,10 @@ const App = () => {
     initAuth();
   }, []);
 
+  const isVerified = user && user.profile && user.profile.is_account_verified;
+
   if (loading) {
-    return html`<div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Initializing System...</div>`;
+    return html`<div className="min-h-screen bg-slate-950 flex items-center justify-center text-white font-black uppercase tracking-widest animate-pulse">Initializing System...</div>`;
   }
 
   return html`
@@ -39,17 +41,26 @@ const App = () => {
         <${Navbar} user=${user} setUser=${setUser} />
         <main className="flex-1">
           <${Routes}>
-            <${Route} path="/" element=${html`<${Home} user=${user} />`} />
+            <${Route} 
+              path="/" 
+              element=${user && !isVerified ? html`<${Navigate} to="/auth" replace />` : html`<${Home} user=${user} />`} 
+            />
             <${Route} 
               path="/auth" 
-              element=${!user || (user.profile && !user.profile.is_account_verified) ? html`<${Auth} user=${user} setUser=${setUser} />` : html`<${Navigate} to="/" replace />`} 
+              element=${!user || !isVerified ? html`<${Auth} user=${user} setUser=${setUser} />` : html`<${Navigate} to="/" replace />`} 
             />
             <${Route} 
               path="/create" 
-              element=${user && user.profile && user.profile.is_account_verified ? html`<${CreateSite} />` : html`<${Navigate} to="/auth" replace />`} 
+              element=${isVerified ? html`<${CreateSite} />` : html`<${Navigate} to="/auth" replace />`} 
             />
-            <${Route} path="/site/:id" element=${html`<${ViewSite} user=${user} />`} />
-            <${Route} path="/profile/:username" element=${html`<${Profile} currentUser=${user} setUser=${setUser} />`} />
+            <${Route} 
+              path="/site/:id" 
+              element=${user && !isVerified ? html`<${Navigate} to="/auth" replace />` : html`<${ViewSite} user=${user} />`} 
+            />
+            <${Route} 
+              path="/profile/:username" 
+              element=${user && !isVerified ? html`<${Navigate} to="/auth" replace />` : html`<${Profile} currentUser=${user} setUser=${setUser} />`} 
+            />
             <${Route} path="/cart/:id" element=${html`<${Navigate} to="/site/:id" replace />`} />
           <//>
         </main>
