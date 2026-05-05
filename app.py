@@ -8,6 +8,7 @@ import time
 import zipfile
 import io
 import random
+import resend
 from datetime import datetime, date
 from flask import Flask, request, jsonify, send_from_directory, send_file, Response
 from flask_cors import CORS
@@ -29,6 +30,10 @@ API_KEY = os.environ.get("APIKEY", "").strip()
 SUPABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("DATABASE_KEY", "").strip() # Secret Service Role Key
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "").strip() # Public Anon Key
+RESEND_KEY = os.environ.get("RESENDKEY", "").strip()
+if RESEND_KEY:
+    resend.api_key = RESEND_KEY
+
 ADMIN_USERNAME = "homelessman"
 
 # --- App Setup ---
@@ -256,12 +261,16 @@ def auth_signup():
     if not SUPABASE_URL: 
         return jsonify({"error": "Server Config Missing (DB)"}), 500
 
+    email = data.get('email')
+    password = data.get('password')
+    username = data.get('username')
+
     url = f"{SUPABASE_URL}/auth/v1/signup"
     headers = get_auth_headers()
     payload = {
-        "email": data.get('email'),
-        "password": data.get('password'),
-        "data": {"username": data.get('username')} 
+        "email": email,
+        "password": password,
+        "data": {"username": username} 
     }
     
     try:
@@ -273,6 +282,19 @@ def auth_signup():
             except:
                 msg = resp.text
             return jsonify({"error": msg}), resp.status_code
+        
+        # Send Welcome Email via Resend if configured
+        if RESEND_KEY and email:
+            try:
+                resend.Emails.send({
+                    "from": "noreply@playsoul.com",
+                    "to": email,
+                    "subject": "Welcome to PlaySOUL!",
+                    "html": f"<p>Hi <strong>{username or email}</strong>,</p><p>Welcome to PlaySOUL! Your account has been created successfully.</p><p>Start generating your digital reality now!</p>"
+                })
+            except Exception as email_err:
+                print(f"Failed to send welcome email: {email_err}")
+
         return jsonify(resp.json()), resp.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
