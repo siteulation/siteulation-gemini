@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File, User as UserIcon, Sparkles, BrainCircuit, Zap } from 'lucide-react';
 import { html, bundleProject } from '../utils.js';
+import { ModelType } from '../types.js';
 import Editor from '@monaco-editor/react';
 
 const ViewSite = ({ user }) => {
@@ -27,6 +28,8 @@ const ViewSite = ({ user }) => {
   // Forking State
   const [isForking, setIsForking] = useState(false);
   const [forkName, setForkName] = useState('');
+  const [forkPrompt, setForkPrompt] = useState('');
+  const [forkModel, setForkModel] = useState(ModelType.GEMMA_3_27B);
   const [isForkingLoading, setIsForkingLoading] = useState(false);
 
   // Console Logs State
@@ -133,21 +136,28 @@ const ViewSite = ({ user }) => {
   };
   
   const handleRemix = () => {
-    setForkName(`Fork of ${cart.name || cart.prompt}`);
+    if (cart.is_listed) {
+        setForkName(`Fork of ${cart.name || 'Project'}`);
+    } else {
+        setForkName(cart.name || 'Project');
+    }
+    setForkPrompt(cart.prompt || '');
+    setForkModel(cart.model || ModelType.GEMMA_3_27B);
     setIsForking(true);
   };
 
   const executeFork = async () => {
     setIsForkingLoading(true);
     try {
+        const isMobile = window.innerWidth < 768;
         const payload = {
-            prompt: cart.prompt,
+            prompt: forkPrompt,
             name: forkName,
-            model: cart.model || 'gemma-3-27b',
+            model: forkModel,
             multiplayer: false,
             remix_code: cart.code,
             provider: 'official',
-            is_mobile: viewport === 'mobile'
+            is_mobile: isMobile
         };
 
         const res = await api.request('/api/generate', {
@@ -494,15 +504,15 @@ const ViewSite = ({ user }) => {
             <div className="flex-1" onClick=${() => !isForkingLoading && setIsForking(false)}></div>
             
             <!-- The Menu -->
-            <div className="w-full max-w-4xl mx-auto bg-[#FFF9D2] border-t-8 border-x-4 border-[#5C3A21] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] p-6 md:p-10 rounded-t-[40px] animate-in slide-in-from-bottom duration-500">
-                <div className="flex items-center justify-between mb-8">
+            <div className="w-full max-w-5xl mx-auto bg-[#FFF9D2] border-t-8 border-x-4 border-[#5C3A21] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] p-6 md:p-8 rounded-t-[40px] animate-in slide-in-from-bottom duration-500 overflow-y-auto max-h-[90vh]">
+                <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center space-x-4">
                         <div className="p-3 bg-[#A05A2C] border-2 border-[#5C3A21] rounded-2xl shadow-inner">
                             <${GitFork} size=${32} className="text-[#FFF9D2]" />
                         </div>
                         <div>
-                            <h2 className="text-3xl font-black text-[#5C3A21] uppercase tracking-tighter leading-none mb-1">Fork Project</h2>
-                            <p className="text-[#5C3A21]/60 text-xs font-bold uppercase tracking-widest">Create a unique instance of this work</p>
+                            <h2 className="text-3xl font-black text-[#5C3A21] uppercase tracking-tighter leading-none mb-1">Fabricate Fork</h2>
+                            <p className="text-[#5C3A21]/60 text-xs font-bold uppercase tracking-widest">Create a unique instance with modifications</p>
                         </div>
                     </div>
                     <button 
@@ -514,49 +524,87 @@ const ViewSite = ({ user }) => {
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- LEFT COLUMN: Inputs -->
+                    <div className="lg:col-span-2 space-y-6">
                         <div className="space-y-2">
-                             <label className="text-[10px] font-black text-[#5C3A21] uppercase tracking-widest ml-1">New Version Name</label>
+                             <label className="text-[10px] font-black text-[#5C3A21] uppercase tracking-widest ml-1">Instance Name</label>
                              <input 
                                 type="text"
                                 value=${forkName}
                                 onChange=${(e) => setForkName(e.target.value)}
-                                placeholder="Enter version name..."
-                                className="w-full bg-white/50 border-4 border-[#5C3A21] px-4 py-4 text-lg font-bold text-[#5C3A21] placeholder-[#5C3A21]/30 focus:bg-white transition-all outline-none rounded-2xl"
+                                placeholder="THE_NEW_VERSION..."
+                                className="w-full bg-white/50 border-4 border-[#5C3A21] px-4 py-3 text-lg font-bold text-[#5C3A21] placeholder-[#5C3A21]/30 focus:bg-white transition-all outline-none rounded-xl uppercase"
                                 disabled=${isForkingLoading}
                              />
                         </div>
 
-                        <div className="bg-[#A05A2C]/10 border-2 border-dashed border-[#5C3A21]/20 p-4 rounded-2xl">
-                            <div className="flex items-center space-x-3 mb-2">
-                                <${Check} size=${14} className="text-green-600" />
-                                <span className="text-[10px] font-bold text-[#5C3A21] uppercase">Pre-filled Logic Included</span>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                                <${Check} size=${14} className="text-green-600" />
-                                <span className="text-[10px] font-bold text-[#5C3A21] uppercase">Standard Unlisted Visibility</span>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-[#5C3A21] uppercase tracking-widest ml-1">Modification Instructions (Prompt)</label>
+                            <div className="relative border-4 border-[#5C3A21] bg-white/50 rounded-xl overflow-hidden">
+                                <textarea
+                                    value=${forkPrompt}
+                                    onChange=${(e) => setForkPrompt(e.target.value)}
+                                    rows=${6}
+                                    className="w-full bg-transparent p-4 text-[#5C3A21] font-bold text-base outline-none resize-none leading-relaxed"
+                                    placeholder="Describe changes or additions..."
+                                    disabled=${isForkingLoading}
+                                ></textarea>
+                                <div className="absolute bottom-2 right-2 text-[9px] text-[#5C3A21]/40 font-black">
+                                    REMIX_MODE: ACTIVE
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex flex-col justify-end space-y-4">
-                        <button
-                            onClick=${executeFork}
-                            disabled=${isForkingLoading || !forkName.trim()}
-                            className=${`w-full py-5 rounded-2xl text-xl font-black uppercase tracking-tighter shadow-[0_8px_0_#3d2716] active:translate-y-1 active:shadow-[0_4px_0_#3d2716] transition-all flex items-center justify-center space-x-3 ${isForkingLoading || !forkName.trim() ? 'bg-gray-400 border-gray-500 text-gray-200 cursor-not-allowed shadow-none translate-y-2' : 'bg-[#5C3A21] text-[#FFF9D2] hover:bg-[#4a2f1b] border-2 border-[#5A3A21]'}`}
-                        >
-                            ${isForkingLoading ? html`
-                                <${Loader2} className="animate-spin" size=${24} />
-                                <span>Fabricating...</span>
-                            ` : html`
-                                <${GitFork} size=${24} />
-                                <span>Fabricate Fork</span>
-                            `}
-                        </button>
-                        <p className="text-center text-[9px] font-bold text-[#5C3A21]/40 uppercase">
-                            Cost: 1 Credit • Official Gemma API Powered
-                        </p>
+                    <!-- RIGHT COLUMN: Specs & Action -->
+                    <div className="space-y-6 flex flex-col">
+                        <div className="border-4 border-[#5C3A21] bg-white/30 p-4 rounded-xl flex-1">
+                            <h3 className="text-xs font-black text-[#5C3A21] uppercase tracking-widest mb-4 border-b-2 border-[#5C3A21] pb-2 text-center">AI Engine</h3>
+                            
+                            <div className="space-y-3">
+                                <button
+                                    onClick=${() => setForkModel(ModelType.GEMMA_3_27B)}
+                                    className=${`w-full p-3 border-2 text-left transition-all relative flex items-start space-x-3 rounded-lg ${forkModel === ModelType.GEMMA_3_27B ? 'bg-[#5C3A21] border-[#5C3A21] text-[#FFF9D2]' : 'bg-white/50 border-[#5C3A21]/30 text-[#5C3A21] hover:border-[#5C3A21]'}`}
+                                >
+                                    <${BrainCircuit} size=${16} />
+                                    <div>
+                                        <div className="text-[10px] font-bold uppercase">Gemma 3 27B</div>
+                                        <div className="text-[8px] opacity-70">Balanced. (1 CR)</div>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick=${() => setForkModel(ModelType.GEMMA_4_31B)}
+                                    className=${`w-full p-3 border-2 text-left transition-all relative flex items-start space-x-3 rounded-lg ${forkModel === ModelType.GEMMA_4_31B ? 'bg-[#5C3A21] border-[#5C3A21] text-[#FFF9D2]' : 'bg-white/50 border-[#5C3A21]/30 text-[#5C3A21] hover:border-[#5C3A21]'}`}
+                                >
+                                    <${Zap} size=${16} />
+                                    <div>
+                                        <div className="text-[10px] font-bold uppercase">Gemma 4 31B</div>
+                                        <div className="text-[8px] opacity-70">Advanced. (3 CR)</div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <button
+                                onClick=${executeFork}
+                                disabled=${isForkingLoading || !forkName.trim()}
+                                className=${`w-full py-4 rounded-2xl text-xl font-black uppercase tracking-tighter shadow-[0_8px_0_#3d2716] active:translate-y-1 active:shadow-[0_4px_0_#3d2716] transition-all flex items-center justify-center space-x-3 ${isForkingLoading || !forkName.trim() ? 'bg-gray-400 border-gray-500 text-gray-200 cursor-not-allowed shadow-none translate-y-2' : 'bg-[#5C3A21] text-[#FFF9D2] hover:bg-[#4a2f1b] border-2 border-[#5A3A21]'}`}
+                            >
+                                ${isForkingLoading ? html`
+                                    <${Loader2} className="animate-spin" size=${24} />
+                                    <span>Building...</span>
+                                ` : html`
+                                    <${Sparkles} size=${24} />
+                                    <span>Build Fork</span>
+                                `}
+                            </button>
+                            <p className="text-center text-[9px] font-bold text-[#5C3A21]/40 uppercase">
+                                Official Gemma API • Credits required
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
