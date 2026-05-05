@@ -6,6 +6,8 @@ create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   username text unique,
   avatar_url text,
+  verification_code text,
+  is_account_verified boolean default false,
   updated_at timestamp with time zone,
   is_banned boolean default false,
   credits integer default 15,

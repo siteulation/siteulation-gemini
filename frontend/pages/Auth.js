@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { html } from '../utils.js';
 import { Lock, User, Mail, ArrowRight, Loader2, CheckCircle, MailCheck, Shield, Key } from 'lucide-react';
 
-const Auth = ({ setUser }) => {
+const Auth = ({ user, setUser }) => {
   const [view, setView] = useState('signin');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -13,8 +13,18 @@ const Auth = ({ setUser }) => {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
   
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    // If we have a user from props but they aren't verified, and we aren't already in verificationSent mode
+    if (user && user.profile && !user.profile.is_account_verified && !verificationSent) {
+      setVerificationSent(true);
+      if (user.email) setEmail(user.email);
+    }
+  }, [user]);
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -52,31 +62,85 @@ const Auth = ({ setUser }) => {
     setError('');
     setPassword('');
     setVerificationSent(false);
+    setVerificationCode('');
+  };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    if (!verificationCode.trim()) return;
+    
+    setVerifying(true);
+    setError('');
+    try {
+        await api.auth.verify(verificationCode);
+        // If success, we are already logged in from signup (usually)
+        // Let's just navigate home
+        navigate('/');
+        window.location.reload(); // Refresh to update user state globally
+    } catch (err) {
+        setError(err.message || "Invalid code");
+    } finally {
+        setVerifying(false);
+    }
   };
 
   if (verificationSent) {
       return html`
-        <div className="min-h-screen flex items-center justify-center p-6 bg-[#0a0c10] font-mono">
-            <div className="w-full max-w-sm border border-green-500/30 bg-slate-900/80 p-8 text-center shadow-[0_0_20px_rgba(34,197,94,0.1)] relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-green-500/50"></div>
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/10 text-green-400 mb-6 border border-green-500/30">
-                    <${MailCheck} size=${32} />
+        <div className="min-h-screen flex items-center justify-center p-6" style=${{
+            backgroundColor: '#2563eb',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.4'/%3E%3C/svg%3E")`,
+            backgroundSize: '120px 30px'
+        }}>
+            <div className="w-full max-w-sm bg-[#FFF9D2] border-4 border-[#5C3A21] p-8 shadow-2xl relative transform rotate-1">
+                <div className="text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#A05A2C] text-[#FFF9D2] mb-4 border-2 border-[#5C3A21] shadow-inner font-black text-2xl">
+                        ?
+                    </div>
+                    <h2 className="text-xl font-black text-[#5C3A21] uppercase tracking-tighter">Verify Reality</h2>
+                    <p className="text-[#5C3A21]/60 text-xs font-bold uppercase tracking-widest mt-1">
+                        We sent a code to <br/>
+                        <span className="text-[#A05A2C]">${email}</span>
+                    </p>
                 </div>
-                <h2 className="text-xl font-bold text-white mb-2 uppercase tracking-widest">Verification Sent</h2>
-                <p className="text-slate-400 text-xs mb-6">
-                    A secure link has been dispatched to <br/>
-                    <span className="font-bold text-green-400">${email}</span>.
-                </p>
-                <div className="text-xs text-slate-500 bg-black p-4 border border-slate-800 mb-6">
-                    > ACCESS_PENDING<br/>
-                    > WAITING_FOR_USER_CONFIRMATION...
+
+                ${error && html`
+                    <div className="mb-4 p-2 bg-red-100 border-2 border-red-400 text-red-700 text-[10px] text-center font-black uppercase">
+                        ${error}
+                    </div>
+                `}
+
+                <form onSubmit=${handleVerify} className="space-y-4">
+                    <div className="space-y-1 text-center">
+                        <label className="text-[10px] font-black text-[#5C3A21] uppercase tracking-widest">6-Digit Code</label>
+                        <input
+                            type="text"
+                            value=${verificationCode}
+                            onChange=${(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            required
+                            placeholder="000000"
+                            className="w-full bg-white border-4 border-[#5C3A21] py-4 text-center text-3xl font-black text-[#5C3A21] tracking-[10px] outline-none rounded-xl placeholder:text-[#5C3A21]/10"
+                            disabled=${verifying}
+                        />
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled=${verifying || verificationCode.length < 6}
+                        className=${`w-full py-4 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center justify-center space-x-2 ${verifying || verificationCode.length < 6 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#5C3A21] text-[#FFF9D2] hover:bg-[#4A2F1B] active:translate-y-1 shadow-[0_4px_0_#3d2716]'}`}
+                    >
+                        ${verifying ? html`<${Loader2} className="animate-spin" size=${16} />` : html`<span>Authenticate</span>`}
+                    </button>
+                </form>
+
+                <div className="mt-8 pt-4 border-t-2 border-[#5C3A21]/10 text-center">
+                    <button 
+                        onClick=${() => setVerificationSent(false)}
+                        className="text-[10px] font-black text-[#5C3A21]/40 uppercase tracking-widest hover:text-[#5C3A21] transition-colors"
+                        disabled=${verifying}
+                    >
+                        Back to Terminal
+                    </button>
                 </div>
-                <button 
-                    onClick=${() => window.location.reload()}
-                    className="w-full bg-slate-800 text-white font-bold py-3 hover:bg-slate-700 transition-all text-xs uppercase border border-slate-600"
-                >
-                    Return to Terminal
-                </button>
             </div>
         </div>
       `;

@@ -285,15 +285,39 @@ def auth_signup():
         
         # Send Welcome Email via Resend if configured
         if RESEND_KEY and email:
+            # Generate 6-digit code
+            verify_code = str(random.randint(100000, 999999))
+            
+            # Update profile with code (trigger handle_new_user might take a moment to fire, so we might need a small delay or retry)
+            # But usually it's instant.
+            signup_data = resp.json()
+            user_id = signup_data.get('id') or (signup_data.get('user') and signup_data.get('user').get('id'))
+            
+            if user_id:
+                # We update the profile after a tiny sleep to ensure trigger finished
+                time.sleep(0.5)
+                patch_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}"
+                requests.patch(patch_url, json={"verification_code": verify_code}, headers=get_db_headers())
+
             try:
                 resend.Emails.send({
-                    "from": "noreply@playsoul.com",
+                    "from": "onboarding@resend.dev",
                     "to": email,
-                    "subject": "Welcome to PlaySOUL!",
-                    "html": f"<p>Hi <strong>{username or email}</strong>,</p><p>Welcome to PlaySOUL! Your account has been created successfully.</p><p>Start generating your digital reality now!</p>"
+                    "subject": f"Your PlaySOUL Verification Code: {verify_code}",
+                    "html": f"""
+                        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 4px solid #5C3A21; border-radius: 20px; background-color: #FFF9D2;">
+                            <h2 style="color: #5C3A21; text-transform: uppercase; letter-spacing: -1px;">Verify your Reality</h2>
+                            <p style="color: #5C3A21; font-weight: bold;">Welcome to PlaySOUL!</p>
+                            <p style="color: #5C3A21;">Use the following code to verify your account:</p>
+                            <div style="background-color: #5C3A21; color: #FFF9D2; font-size: 32px; font-weight: 900; padding: 20px; text-align: center; border-radius: 12px; margin: 20px 0; letter-spacing: 10px;">
+                                {verify_code}
+                            </div>
+                            <p style="color: #5C3A21; font-size: 10px; text-transform: uppercase;">This code will unlock your creative potential.</p>
+                        </div>
+                    """
                 })
             except Exception as email_err:
-                print(f"Failed to send welcome email: {email_err}")
+                print(f"Failed to send verification email: {email_err}")
 
         return jsonify(resp.json()), resp.status_code
     except Exception as e:
@@ -315,8 +339,47 @@ def auth_signin():
 def auth_user():
     user = verify_token(request)
     if user:
+        # Get profile data
+        user_id = user['id']
+        url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=*,is_account_verified"
+        resp = requests.get(url, headers=get_db_headers())
+        if resp.status_code == 200 and resp.json():
+            user['profile'] = resp.json()[0]
         return jsonify(user), 200
     return jsonify({"error": "Invalid or expired token"}), 401
+
+@app.route('/api/auth/verify', methods=['POST'])
+def auth_verify():
+    user = verify_token(request)
+    if not user:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    data = request.json or {}
+    code = data.get('code')
+    
+    if not code:
+        return jsonify({"error": "Code required"}), 400
+        
+    user_id = user['id']
+    # Check profiles
+    url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=verification_code,is_account_verified"
+    resp = requests.get(url, headers=get_db_headers())
+    if resp.status_code != 200 or not resp.json():
+        return jsonify({"error": "Profile not found"}), 404
+        
+    profile = resp.json()[0]
+    expected_code = profile.get('verification_code')
+    
+    if profile.get('is_account_verified'):
+        return jsonify({"success": True, "message": "Already verified"}), 200
+    
+    if expected_code and str(code).strip() == str(expected_code).strip():
+        # Mark as verified
+        patch_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}"
+        requests.patch(patch_url, json={"is_account_verified": True}, headers=get_db_headers())
+        return jsonify({"success": True}), 200
+    else:
+        return jsonify({"error": "Invalid verification code"}), 400
 
 @app.route('/api/profile/update', methods=['POST'])
 def update_profile():

@@ -42,11 +42,11 @@ const App = () => {
             <${Route} path="/" element=${html`<${Home} user=${user} />`} />
             <${Route} 
               path="/auth" 
-              element=${!user ? html`<${Auth} setUser=${setUser} />` : html`<${Navigate} to="/" replace />`} 
+              element=${!user || (user.profile && !user.profile.is_account_verified) ? html`<${Auth} user=${user} setUser=${setUser} />` : html`<${Navigate} to="/" replace />`} 
             />
             <${Route} 
               path="/create" 
-              element=${user ? html`<${CreateSite} />` : html`<${Navigate} to="/auth" replace />`} 
+              element=${user && user.profile && user.profile.is_account_verified ? html`<${CreateSite} />` : html`<${Navigate} to="/auth" replace />`} 
             />
             <${Route} path="/site/:id" element=${html`<${ViewSite} user=${user} />`} />
             <${Route} path="/profile/:username" element=${html`<${Profile} currentUser=${user} setUser=${setUser} />`} />

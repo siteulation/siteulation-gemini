@@ -115,6 +115,13 @@ export const api = {
       return handleResponse(res);
     },
 
+    verify: async (code) => {
+      return api.request('/api/auth/verify', {
+        method: 'POST',
+        body: JSON.stringify({ code })
+      });
+    },
+
     getUser: async () => {
       const token = localStorage.getItem(TOKEN_KEY);
       if (!token) return null;
