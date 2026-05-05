@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api.js';
-import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File, User as UserIcon, Sparkles } from 'lucide-react';
+import { ArrowLeft, Loader2, Monitor, Smartphone, Tablet, ExternalLink, Code, Trash2, ShieldAlert, GitFork, Pencil, Check, X, Copy, Globe, Lock, FileCode, FileType, File, User as UserIcon } from 'lucide-react';
 import { html, bundleProject } from '../utils.js';
 import Editor from '@monaco-editor/react';
-import { motion, AnimatePresence } from 'motion/react';
 
 const ViewSite = ({ user }) => {
   const { id } = useParams();
@@ -14,11 +13,6 @@ const ViewSite = ({ user }) => {
   const [viewport, setViewport] = useState('desktop');
   const [adminActionLoading, setAdminActionLoading] = useState(false);
   
-  // Forking State
-  const [isForking, setIsForking] = useState(false);
-  const [remixPrompt, setRemixPrompt] = useState('');
-  const [isGeneratingRemix, setIsGeneratingRemix] = useState(false);
-
   // Renaming State
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState('');
@@ -29,6 +23,11 @@ const ViewSite = ({ user }) => {
   const [activeFileIndex, setActiveFileIndex] = useState(0);
   const [previewCode, setPreviewCode] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // Forking State
+  const [isForking, setIsForking] = useState(false);
+  const [forkName, setForkName] = useState('');
+  const [isForkingLoading, setIsForkingLoading] = useState(false);
 
   // Console Logs State
   const [logs, setLogs] = useState([]);
@@ -134,32 +133,38 @@ const ViewSite = ({ user }) => {
   };
   
   const handleRemix = () => {
+    setForkName(`Fork of ${cart.name || cart.prompt}`);
     setIsForking(true);
   };
 
-  const handleSubmitFork = async (e) => {
-    if (e) e.preventDefault();
-    if (!remixPrompt.trim() && !window.confirm("Remix without changes?")) return;
-    
-    setIsGeneratingRemix(true);
+  const executeFork = async () => {
+    setIsForkingLoading(true);
     try {
-        const data = await api.request('/api/carts/generate', {
+        const payload = {
+            prompt: cart.prompt,
+            name: forkName,
+            model: cart.model || 'gemma-3-27b',
+            multiplayer: false,
+            remix_code: cart.code,
+            provider: 'official',
+            is_mobile: viewport === 'mobile'
+        };
+
+        const res = await api.request('/api/generate', {
             method: 'POST',
-            body: JSON.stringify({
-                prompt: remixPrompt || "Original remix",
-                remix_code: cart.code
-            })
+            body: JSON.stringify(payload)
         });
-        
-        if (data.cart) {
-            navigate(`/view/${data.cart.id}`);
+
+        if (res.success && res.cart) {
+            navigate(`/site/${res.cart.id}`);
             setIsForking(false);
-            setRemixPrompt('');
+        } else {
+            throw new Error(res.error || "Generation failed");
         }
     } catch (err) {
-        alert(err.message || "Failed to generate remix");
+        alert("Fork failed: " + err.message);
     } finally {
-        setIsGeneratingRemix(false);
+        setIsForkingLoading(false);
     }
   };
   
@@ -252,12 +257,13 @@ const ViewSite = ({ user }) => {
   };
 
   return html`
-    <div className=${`flex flex-col h-screen pt-16 transition-all duration-500 ${isForking ? 'blur-md scale-[0.98]' : ''}`} style=${{
+    <div className=${`flex flex-col h-screen pt-16 transition-all duration-700 ${isForking ? 'blur-md brightness-50 scale-[0.98]' : ''}`} style=${{
         backgroundColor: '#2563eb',
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='30' viewBox='0 0 120 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 30 0, 60 15 T 120 15' fill='none' stroke='white' stroke-width='1' opacity='0.4'/%3E%3C/svg%3E")`,
         backgroundSize: '120px 30px'
     }}>
-      <div className="bg-[#A05A2C] border-b-4 border-[#5C3A21] px-4 h-14 flex items-center justify-between shrink-0 shadow-lg relative z-10">
+      <!-- Toolbar -->
+      <div className="bg-[#A05A2C] border-b-4 border-[#5C3A21] px-4 h-14 flex items-center justify-between shrink-0 shadow-lg">
         <div className="flex items-center space-x-4 flex-1 mr-4 overflow-hidden">
           <${Link} to="/" className="p-2 hover:bg-white/10 rounded text-white transition-all shrink-0">
             <${ArrowLeft} size=${20} />
@@ -389,6 +395,7 @@ const ViewSite = ({ user }) => {
             sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin allow-pointer-lock"
           />
           
+          <!-- Console Toggle Tab -->
           <button 
              onClick=${() => setShowConsole(!showConsole)}
              className="absolute bottom-2 right-2 px-2 py-1 bg-black/80 text-white text-[10px] font-bold uppercase tracking-widest rounded border border-white/20 hover:bg-black transition-colors z-10"
@@ -396,6 +403,7 @@ const ViewSite = ({ user }) => {
              ${showConsole ? 'Hide Console' : 'Show Console'}
           </button>
 
+          <!-- Docked Console Overlay -->
           ${showConsole && html`
             <div className="absolute bottom-0 left-0 right-0 h-48 bg-black/95 text-green-400 font-mono text-[10px] border-t-2 border-[#5C3A21] flex flex-col z-20 animate-in slide-in-from-bottom duration-300">
                 <div className="flex items-center justify-between p-1 bg-white/10 border-b border-white/10">
@@ -455,6 +463,7 @@ const ViewSite = ({ user }) => {
                     </div>
                 </div>
 
+                <!-- Editor -->
                 <div className="flex-1 overflow-hidden bg-white">
                   <${Editor}
                      height="100%"
@@ -476,85 +485,83 @@ const ViewSite = ({ user }) => {
           </div>
         </div>
       `}
+    </div>
 
-      <${AnimatePresence}>
-        ${isForking && html`
-          <${motion.div}
-            initial=${{ opacity: 0 }}
-            animate=${{ opacity: 1 }}
-            exit=${{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-end justify-center p-0 md:p-4 bg-black/60 pointer-events-auto"
-            onClick=${() => !isGeneratingRemix && setIsForking(false)}
-          >
-            <${motion.div} 
-                initial=${{ y: '100%' }}
-                animate=${{ y: 0 }}
-                exit=${{ y: '100%' }}
-                transition=${{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="bg-[#FFF9D2] border-t-8 md:border-8 border-[#5C3A21] w-full max-w-2xl rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden p-6 md:p-8 relative pointer-events-auto"
-                onClick=${e => e.stopPropagation()}
-            >
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-[#A05A2C] rounded-xl">
-                            <${GitFork} size=${28} className="text-white" />
+    <!-- Forking Menu Overlay -->
+    ${isForking && html`
+        <div className="fixed inset-0 z-[150] flex flex-col justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+            <!-- Dismissal click area -->
+            <div className="flex-1" onClick=${() => !isForkingLoading && setIsForking(false)}></div>
+            
+            <!-- The Menu -->
+            <div className="w-full max-w-4xl mx-auto bg-[#FFF9D2] border-t-8 border-x-4 border-[#5C3A21] shadow-[0_-20px_50px_rgba(0,0,0,0.5)] p-6 md:p-10 rounded-t-[40px] animate-in slide-in-from-bottom duration-500">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center space-x-4">
+                        <div className="p-3 bg-[#A05A2C] border-2 border-[#5C3A21] rounded-2xl shadow-inner">
+                            <${GitFork} size=${32} className="text-[#FFF9D2]" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-black text-[#5C3A21] uppercase tracking-tight leading-none mb-1">Fork Project</h2>
-                            <p className="text-sm text-[#A05A2C] font-bold opacity-70">Add your signature to this build</p>
+                            <h2 className="text-3xl font-black text-[#5C3A21] uppercase tracking-tighter leading-none mb-1">Fork Project</h2>
+                            <p className="text-[#5C3A21]/60 text-xs font-bold uppercase tracking-widest">Create a unique instance of this work</p>
                         </div>
                     </div>
                     <button 
-                        onClick=${() => setIsForking(false)} 
-                        disabled=${isGeneratingRemix}
-                        className="p-2 text-[#5C3A21] hover:bg-black/5 rounded-full transition-colors"
+                        onClick=${() => setIsForking(false)}
+                        className="p-3 hover:bg-[#5C3A21]/10 rounded-full text-[#5C3A21] transition-all"
+                        disabled=${isForkingLoading}
                     >
-                        <${X} size=${28} />
+                        <${X} size=${24} />
                     </button>
                 </div>
 
-                <form onSubmit=${handleSubmitFork} className="space-y-6">
-                    <div className="space-y-3">
-                        <label className="text-[11px] font-black uppercase tracking-[0.2em] text-[#5C3A21] opacity-60">Architectural Directive</label>
-                        <textarea
-                            value=${remixPrompt}
-                            onChange=${e => setRemixPrompt(e.target.value)}
-                            placeholder="Describe how to transform this project..."
-                            className="w-full bg-white border-4 border-[#5C3A21] p-5 text-[#5C3A21] font-bold text-lg h-40 focus:ring-4 focus:ring-[#A05A2C]/20 outline-none transition-all resize-none shadow-[8px_8px_0px_#5C3A21] placeholder:text-[#5C3A21]/20 placeholder:italic"
-                            disabled=${isGeneratingRemix}
-                            autoFocus
-                        />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                        <div className="space-y-2">
+                             <label className="text-[10px] font-black text-[#5C3A21] uppercase tracking-widest ml-1">New Version Name</label>
+                             <input 
+                                type="text"
+                                value=${forkName}
+                                onChange=${(e) => setForkName(e.target.value)}
+                                placeholder="Enter version name..."
+                                className="w-full bg-white/50 border-4 border-[#5C3A21] px-4 py-4 text-lg font-bold text-[#5C3A21] placeholder-[#5C3A21]/30 focus:bg-white transition-all outline-none rounded-2xl"
+                                disabled=${isForkingLoading}
+                             />
+                        </div>
+
+                        <div className="bg-[#A05A2C]/10 border-2 border-dashed border-[#5C3A21]/20 p-4 rounded-2xl">
+                            <div className="flex items-center space-x-3 mb-2">
+                                <${Check} size=${14} className="text-green-600" />
+                                <span className="text-[10px] font-bold text-[#5C3A21] uppercase">Pre-filled Logic Included</span>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                                <${Check} size=${14} className="text-green-600" />
+                                <span className="text-[10px] font-bold text-[#5C3A21] uppercase">Standard Unlisted Visibility</span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="flex items-center justify-end space-x-4 pt-4">
+                    <div className="flex flex-col justify-end space-y-4">
                         <button
-                            type="button"
-                            onClick=${() => setIsForking(false)}
-                            disabled=${isGeneratingRemix}
-                            className="px-8 py-4 font-black text-[#5C3A21] uppercase tracking-widest text-sm hover:bg-black/5 rounded-xl transition-colors"
+                            onClick=${executeFork}
+                            disabled=${isForkingLoading || !forkName.trim()}
+                            className=${`w-full py-5 rounded-2xl text-xl font-black uppercase tracking-tighter shadow-[0_8px_0_#3d2716] active:translate-y-1 active:shadow-[0_4px_0_#3d2716] transition-all flex items-center justify-center space-x-3 ${isForkingLoading || !forkName.trim() ? 'bg-gray-400 border-gray-500 text-gray-200 cursor-not-allowed shadow-none translate-y-2' : 'bg-[#5C3A21] text-[#FFF9D2] hover:bg-[#4a2f1b] border-2 border-[#5A3A21]'}`}
                         >
-                            Abort
-                        </button>
-                        <button
-                            type="submit"
-                            disabled=${isGeneratingRemix}
-                            className="px-10 py-4 bg-[#A05A2C] text-white font-black uppercase tracking-widest text-sm border-4 border-[#5C3A21] shadow-[8px_8px_0px_#5C3A21] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all flex items-center space-x-3 group h-14 min-w-[200px] justify-center rounded-xl"
-                        >
-                            ${isGeneratingRemix ? html`
-                                <${Loader2} className="animate-spin" size=${20} />
-                                <span>Forging...</span>
+                            ${isForkingLoading ? html`
+                                <${Loader2} className="animate-spin" size=${24} />
+                                <span>Fabricating...</span>
                             ` : html`
-                                <${Sparkles} size=${20} />
-                                <span>Instantiate</span>
+                                <${GitFork} size=${24} />
+                                <span>Fabricate Fork</span>
                             `}
                         </button>
+                        <p className="text-center text-[9px] font-bold text-[#5C3A21]/40 uppercase">
+                            Cost: 1 Credit • Official Gemma API Powered
+                        </p>
                     </div>
-                </form>
-            </${motion.div}>
-          </${motion.div}>
-        `}
-      <//>
-    </div>
+                </div>
+            </div>
+        </div>
+    `}
   `;
 };
 
