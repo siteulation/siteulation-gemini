@@ -284,20 +284,31 @@ def auth_signup():
             return jsonify({"error": msg}), resp.status_code
         
         # Send Welcome Email via Resend if configured
+        final_json = resp.json()
         if RESEND_KEY and email:
             # Generate 6-digit code
             verify_code = str(random.randint(100000, 999999))
             
-            # Update profile with code (trigger handle_new_user might take a moment to fire, so we might need a small delay or retry)
-            # But usually it's instant.
-            signup_data = resp.json()
-            user_id = signup_data.get('id') or (signup_data.get('user') and signup_data.get('user').get('id'))
+            # Update profile with code
+            user_id = final_json.get('id') or (final_json.get('user') and final_json.get('user').get('id'))
             
             if user_id:
-                # We update the profile after a tiny sleep to ensure trigger finished
-                time.sleep(0.5)
-                patch_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}"
-                requests.patch(patch_url, json={"verification_code": verify_code}, headers=get_db_headers())
+                # Retry loop to ensure profile exists (Supabase trigger might have a tiny delay)
+                for _ in range(3):
+                    time.sleep(1.0)
+                    patch_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}"
+                    patch_resp = requests.patch(patch_url, json={"verification_code": verify_code}, headers=get_db_headers())
+                    if patch_resp.status_code < 300:
+                        break
+                    print(f"Retrying profile patch for {user_id}...")
+                
+                # Fetch profile to include in response
+                prof_resp = requests.get(f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=*,is_account_verified", headers=get_db_headers())
+                if prof_resp.status_code == 200 and prof_resp.json():
+                    if 'user' in final_json:
+                        final_json['user']['profile'] = prof_resp.json()[0]
+                    else:
+                        final_json['profile'] = prof_resp.json()[0]
 
             try:
                 resend.Emails.send({
@@ -319,7 +330,7 @@ def auth_signup():
             except Exception as email_err:
                 print(f"Failed to send verification email: {email_err}")
 
-        return jsonify(resp.json()), resp.status_code
+        return jsonify(final_json), resp.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -330,10 +341,20 @@ def auth_signin():
     url = f"{SUPABASE_URL}/auth/v1/token?grant_type=password"
     payload = {"email": data.get('email'), "password": data.get('password')}
     resp = requests.post(url, json=payload, headers=get_auth_headers())
-    try:
+    
+    if resp.status_code != 200:
         return jsonify(resp.json()), resp.status_code
+
+    try:
+        final_json = resp.json()
+        user_id = final_json.get('user', {}).get('id')
+        if user_id:
+            prof_resp = requests.get(f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=*,is_account_verified", headers=get_db_headers())
+            if prof_resp.status_code == 200 and prof_resp.json():
+                final_json['user']['profile'] = prof_resp.json()[0]
+        return jsonify(final_json), 200
     except:
-        return jsonify({"error": resp.text}), resp.status_code
+        return jsonify({"error": "Failed to process signin"}), 500
 
 @app.route('/api/auth/user', methods=['GET'])
 def auth_user():

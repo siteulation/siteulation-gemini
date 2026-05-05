@@ -36,8 +36,8 @@ const Auth = ({ user, setUser }) => {
         const data = await api.auth.signUp(email, password, username);
         if (data.access_token) {
             api.setToken(data.access_token);
-            setUser(data.user);
-            navigate('/');
+            setUser(data.user || data); 
+            setVerificationSent(true);
         } else {
             setVerificationSent(true);
         }
@@ -46,7 +46,13 @@ const Auth = ({ user, setUser }) => {
         if (data.access_token) {
             api.setToken(data.access_token);
             setUser(data.user);
-            navigate('/');
+            // If sign-in succeeds, only navigate if verified
+            // The useEffect will catch unverified users and show the screen
+            if (data.user && data.user.profile && data.user.profile.is_account_verified) {
+                navigate('/');
+            } else {
+                setVerificationSent(true);
+            }
         }
       }
     } catch (err) {
