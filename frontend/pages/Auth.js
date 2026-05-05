@@ -107,6 +107,9 @@ const Auth = ({ user, setUser }) => {
                         We sent a code to <br/>
                         <span className="text-[#A05A2C]">${email}</span>
                     </p>
+                    <p className="text-[9px] font-black text-[#5C3A21]/30 uppercase tracking-tighter mt-2">
+                        If you don't see anything, <span className="text-[#5C3A21]/60">CHECK YOUR SPAM</span>.
+                    </p>
                 </div>
 
                 ${error && html`

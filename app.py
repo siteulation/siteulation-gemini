@@ -72,6 +72,9 @@ def get_db_headers():
         "Prefer": "return=representation"
     }
 
+# --- Global RAM Storage for Verification ---
+PENDING_VERIFICATIONS = {} # user_id -> {"code": str, "timestamp": float}
+
 def get_auth_headers():
     # Use Anon Key if available, fallback to Service Role
     key = SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY
@@ -283,32 +286,23 @@ def auth_signup():
                 msg = resp.text
             return jsonify({"error": msg}), resp.status_code
         
-        # Send Welcome Email via Resend if configured
+        # Send Verification Email via Resend if configured
         final_json = resp.json()
         if RESEND_KEY and email:
             # Generate 6-digit code
             verify_code = str(random.randint(100000, 999999))
-            
-            # Update profile with code
             user_id = final_json.get('id') or (final_json.get('user') and final_json.get('user').get('id'))
             
             if user_id:
-                # Retry loop to ensure profile exists (Supabase trigger might have a tiny delay)
-                for _ in range(3):
-                    time.sleep(1.0)
-                    patch_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}"
-                    patch_resp = requests.patch(patch_url, json={"verification_code": verify_code}, headers=get_db_headers())
-                    if patch_resp.status_code < 300:
-                        break
-                    print(f"Retrying profile patch for {user_id}...")
+                # Store in RAM for 15 minutes
+                PENDING_VERIFICATIONS[user_id] = {
+                    "code": verify_code,
+                    "timestamp": time.time()
+                }
                 
-                # Fetch profile to include in response
-                prof_resp = requests.get(f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=*,is_account_verified", headers=get_db_headers())
-                if prof_resp.status_code == 200 and prof_resp.json():
-                    if 'user' in final_json:
-                        final_json['user']['profile'] = prof_resp.json()[0]
-                    else:
-                        final_json['profile'] = prof_resp.json()[0]
+                # Still try to patch the profile (optional backup)
+                patch_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}"
+                requests.patch(patch_url, json={"verification_code": verify_code}, headers=get_db_headers())
 
             try:
                 resend.Emails.send({
@@ -366,6 +360,13 @@ def auth_user():
         resp = requests.get(url, headers=get_db_headers())
         if resp.status_code == 200 and resp.json():
             user['profile'] = resp.json()[0]
+        else:
+            # Fallback if profile trigger hasn't fired
+            user['profile'] = {
+                "is_account_verified": False,
+                "is_banned": False,
+                "credits": 15
+            }
         return jsonify(user), 200
     return jsonify({"error": "Invalid or expired token"}), 401
 
@@ -376,31 +377,60 @@ def auth_verify():
         return jsonify({"error": "Unauthorized"}), 401
     
     data = request.json or {}
-    code = data.get('code')
+    code = str(data.get('code', '')).strip()
     
     if not code:
         return jsonify({"error": "Code required"}), 400
         
     user_id = user['id']
-    # Check profiles
+    
+    # 1. Check RAM First (Fastest, avoids DB race)
+    pending = PENDING_VERIFICATIONS.get(user_id)
+    ram_match = False
+    
+    if pending:
+        # Check expiry (15 mins)
+        if time.time() - pending['timestamp'] < 900:
+            if pending['code'] == code:
+                ram_match = True
+        else:
+            del PENDING_VERIFICATIONS[user_id] # Expired
+
+    # 2. Check DB as fallback
+    db_match = False
     url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}&select=verification_code,is_account_verified"
     resp = requests.get(url, headers=get_db_headers())
-    if resp.status_code != 200 or not resp.json():
-        return jsonify({"error": "Profile not found"}), 404
+    
+    if resp.status_code == 200 and resp.json():
+        profile = resp.json()[0]
+        if profile.get('is_account_verified'):
+            return jsonify({"success": True, "message": "Already verified"}), 200
         
-    profile = resp.json()[0]
-    expected_code = profile.get('verification_code')
-    
-    if profile.get('is_account_verified'):
-        return jsonify({"success": True, "message": "Already verified"}), 200
-    
-    if expected_code and str(code).strip() == str(expected_code).strip():
-        # Mark as verified
+        expected_code = profile.get('verification_code')
+        if expected_code and str(expected_code).strip() == code:
+            db_match = True
+
+    if ram_match or db_match:
+        # Mark as verified in DB
         patch_url = f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user_id}"
-        requests.patch(patch_url, json={"is_account_verified": True}, headers=get_db_headers())
+        # We might need to UPSERT if the profile trigger hasn't fired yet?
+        # But usually we just patch.
+        r = requests.patch(patch_url, json={"is_account_verified": True}, headers=get_db_headers())
+        
+        # If patch failed, maybe profile doesn't exist? Try to create it.
+        if r.status_code >= 400:
+             # Manual creation fallback
+             requests.post(f"{SUPABASE_URL}/rest/v1/profiles", json={
+                 "id": user_id,
+                 "is_account_verified": True,
+                 "username": user.get('email', '').split('@')[0] + str(random.randint(100,999))
+             }, headers=get_db_headers())
+
+        if user_id in PENDING_VERIFICATIONS:
+            del PENDING_VERIFICATIONS[user_id]
         return jsonify({"success": True}), 200
     else:
-        return jsonify({"error": "Invalid verification code"}), 400
+        return jsonify({"error": "Invalid or expired verification code"}), 400
 
 @app.route('/api/profile/update', methods=['POST'])
 def update_profile():
